@@ -647,21 +647,27 @@ function renderCards(fairs) {
     const timeInfo = st==='upcoming' && days<=400
       ? `<div class="info-row"><span class="info-icon">⏱</span><span class="countdown"><span class="cval">${days}</span> days left</span></div>`
       : st==='ongoing' ? `<div class="info-row"><span class="info-icon">🟢</span><span style="color:#6ee7b7;font-size:.78rem">Open now</span></div>` : '';
+    const icon = f.icon || SECTOR_ICONS[f.sector] || '🌐';
+    const edition = f.edition || '';
+    const freq = f.freq || '';
+    const editionLine = (edition || freq) ? `${edition}${edition&&freq?' · ':''}${freq}` : f.country;
+    const venueLine = [f.venue, f.city, f.country].filter(Boolean).join(', ');
+    const visitorsLine = f.visitors ? `~${f.visitors} visitors · ${f.exhibitors} exhibitors` : `${f.city}, ${f.country}`;
     return `<div class="fair-card" style="animation-delay:${i*30}ms" onclick="openModal(${f.id})">
       <div class="card-header">
-        <div class="card-logo">${f.icon}</div>
+        <div class="card-logo">${icon}</div>
         <div class="card-badges"><span class="badge b-sector">${f.sectorLabel}</span>${statusBadge}</div>
       </div>
       <div class="card-name">${f.name}</div>
-      <div class="card-edition">${f.edition} · ${f.freq}</div>
+      <div class="card-edition">${editionLine}</div>
       <div class="card-info">
         <div class="info-row"><span class="info-icon">📅</span><strong>${fmtDate(f.startDate)}</strong> — ${fmtDate(f.endDate)}</div>
-        <div class="info-row"><span class="info-icon">📍</span>${f.venue}, <strong>${f.city}</strong>, ${f.country}</div>
-        <div class="info-row"><span class="info-icon">👥</span>~${f.visitors} visitors · ${f.exhibitors} exhibitors</div>
+        <div class="info-row"><span class="info-icon">📍</span>${venueLine}</div>
+        <div class="info-row"><span class="info-icon">👥</span>${visitorsLine}</div>
         ${timeInfo}
       </div>
       <div class="card-footer">
-        <div class="visitor-stat">🏆 <strong>${f.visitors}</strong></div>
+        <div class="visitor-stat">🏆 <strong>${f.visitors || f.country}</strong></div>
         <div class="card-actions">
           <button class="btn-fav ${fav?'active':''}" onclick="toggleFav(event,${f.id})">⭐</button>
           <button class="btn-detail" onclick="openModal(${f.id});event.stopPropagation()">Details →</button>
