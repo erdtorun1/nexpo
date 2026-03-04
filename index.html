@@ -469,21 +469,33 @@ async function loadFromAPI() {
     // Normalise: convert string dates → Date objects
     // Sheets returns "Tue Dec 02 2025 00:00:00 GMT+0100" — handle both formats
     function parseSheetDate(s) {
-      if (!s) return null;
+      if (!s || s === 'undefined') return null;
       const iso = s.match(/(\d{4})-(\d{2})-(\d{2})/);
       if (iso) return new Date(iso[0]);
       const d = new Date(s);
       return isNaN(d) ? null : d;
     }
     LIVE_FAIRS = json.fairs
-      .filter(f => f.name && f.startDate)
+      .filter(f => f.name && f.name !== 'undefined' && f.startDate)
       .map((f, i) => ({
         ...f,
-        id:         f.id || i + 1,
-        startDate:  parseSheetDate(f.startDate),
-        endDate:    parseSheetDate(f.endDate || f.startDate),
-        lat:        parseFloat(f.lat) || null,
-        lng:        parseFloat(f.lng) || null,
+        id:          f.id || i + 1,
+        name:        f.name || '',
+        fullName:    f.fullName || f.name || '',
+        sector:      f.sector || 'other',
+        sectorLabel: f.sectorLabel || 'Other',
+        city:        f.city || '',
+        country:     f.country || '',
+        venue:       f.venue || '',
+        visitors:    f.visitors || '',
+        exhibitors:  f.exhibitors || '',
+        website:     f.website || '',
+        description: f.description || '',
+        freq:        f.freq || '',
+        startDate:   parseSheetDate(f.startDate),
+        endDate:     parseSheetDate(f.endDate || f.startDate),
+        lat:         parseFloat(f.lat) || null,
+        lng:         parseFloat(f.lng) || null,
       }))
       .filter(f => f.startDate && !isNaN(f.startDate));
 
