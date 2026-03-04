@@ -489,9 +489,15 @@ async function loadFromAPI() {
         venue:       f.venue || '',
         visitors:    f.visitors || '',
         exhibitors:  f.exhibitors || '',
-        website:     f.website || '',
+        website:     f.event_url || f.website || '',
         description: f.description || '',
         freq:        f.freq || '',
+        organizer_name: f.organizer_name || '',
+        organizer_url:  f.organizer_url || '',
+        event_url:      f.event_url || f.website || '',
+        source_url:     f.source_url || '',
+        last_seen_at:   f.lastUpdated || f.last_seen_at || '',
+        hash_key:       f.hash_key || '',
         startDate:   parseSheetDate(f.startDate),
         endDate:     parseSheetDate(f.endDate || f.startDate),
         lat:         parseFloat(f.lat) || null,
@@ -535,7 +541,7 @@ function showDataBadge(text) {
       transition: opacity 1s; cursor: default;
     `;
     document.body.appendChild(badge);
-    setTimeout(() => { badge.style.opacity = '0'; }, 5000);
+    // Keep badge visible
   }
   badge.textContent = text;
   badge.style.opacity = '1';
@@ -574,8 +580,10 @@ function buildCountryDropdown(fairs) {
 }
 
 function updateHeaderCounts(fairs) {
-  document.getElementById('hCount').textContent = fairs.length;
-  document.getElementById('hCountries').textContent = new Set(fairs.map(f=>f.country)).size;
+  document.getElementById('hCount').textContent = fairs.length.toLocaleString();
+  document.getElementById('hCountries').textContent = new Set(fairs.filter(f=>f.country).map(f=>f.country)).size;
+  const secEl = document.getElementById('hSectors');
+  if (secEl) secEl.textContent = new Set(fairs.filter(f=>f.sector && f.sector!=='other').map(f=>f.sector)).size;
 }
 
 function selectSector(id, el) {
@@ -704,7 +712,7 @@ function renderMap(fairs) {
   };
 
   fairs.forEach((f, i) => {
-    if (!f.lat || !f.lng) return;
+    if (!f.lat || !f.lng || isNaN(f.lat) || isNaN(f.lng)) return;
     const st = getStatus(f.startDate, f.endDate);
     const col = sectorColors[f.sector] || '#3b82f6';
 
@@ -739,7 +747,7 @@ function renderMap(fairs) {
     };
     const st2 = st==='ongoing' ? '🟢 ' : st==='upcoming' ? '🔵 ' : '⚫ ';
     card.innerHTML = `
-      <div class="map-card-name">${f.icon} ${f.name}</div>
+      <div class="map-card-name">${SECTOR_ICONS[f.sector]||'🌐'} ${f.name}</div>
       <div class="map-card-meta">${f.city}, ${f.country} · ${f.sectorLabel}</div>
       <div class="map-card-date">${st2}${fmtDateShort(f.startDate)} — ${fmtDateShort(f.endDate)} ${f.startDate.getFullYear()}</div>
     `;
@@ -756,27 +764,28 @@ function highlightSidebarCard(id) {
 // ────────────────────────────────────────────────────────────────────────────
 // MODAL
 function openModal(id) {
-  const f = FAIRS.find(x => x.id === id);
+  const f = activeFairs().find(x => String(x.id) === String(id));
   if (!f) return;
   const st = getStatus(f.startDate, f.endDate);
   const days = daysUntil(f.startDate);
   const stText = st==='ongoing' ? '🟢 Ongoing' : st==='upcoming' ? `🔵 In ${days} days` : '⚫ Concluded';
   document.getElementById('modalBody').innerHTML = `
-    <div class="modal-tag">${f.icon} ${f.sectorLabel}</div>
+    <div class="modal-tag">${SECTOR_ICONS[f.sector]||'🌐'} ${f.sectorLabel}</div>
     <div class="modal-title">${f.name}</div>
     <div class="modal-subtitle">${f.fullName}</div>
     <div class="modal-grid">
       <div class="mstat"><div class="mstat-label">Dates</div><div class="mstat-value" style="font-size:.82rem">${fmtDate(f.startDate)} — ${fmtDate(f.endDate)}</div></div>
       <div class="mstat"><div class="mstat-label">Status</div><div class="mstat-value" style="font-size:.82rem">${stText}</div></div>
-      <div class="mstat"><div class="mstat-label">Venue</div><div class="mstat-value" style="font-size:.8rem">${f.venue}</div></div>
-      <div class="mstat"><div class="mstat-label">Location</div><div class="mstat-value" style="font-size:.82rem">${f.city}, ${f.country}</div></div>
-      <div class="mstat"><div class="mstat-label">Visitors</div><div class="mstat-value">${f.visitors}</div></div>
-      <div class="mstat"><div class="mstat-label">Exhibitors</div><div class="mstat-value">${f.exhibitors}</div></div>
-      <div class="mstat"><div class="mstat-label">Frequency</div><div class="mstat-value" style="font-size:.82rem">${f.freq}</div></div>
+      <div class="mstat"><div class="mstat-label">Venue</div><div class="mstat-value" style="font-size:.8rem">${f.venue||'—'}</div></div>
+      <div class="mstat"><div class="mstat-label">Location</div><div class="mstat-value" style="font-size:.82rem">${[f.city,f.country].filter(Boolean).join(', ')||'—'}</div></div>
+      <div class="mstat"><div class="mstat-label">Visitors</div><div class="mstat-value">${f.visitors||'—'}</div></div>
+      <div class="mstat"><div class="mstat-label">Exhibitors</div><div class="mstat-value">${f.exhibitors||'—'}</div></div>
+      <div class="mstat"><div class="mstat-label">Frequency</div><div class="mstat-value" style="font-size:.82rem">${f.freq||'—'}</div></div>
       <div class="mstat"><div class="mstat-label">Region</div><div class="mstat-value" style="font-size:.82rem">${REGIONS[f.country]||'—'}</div></div>
+      <div class="mstat"><div class="mstat-label">Organizer</div><div class="mstat-value" style="font-size:.82rem">${f.organizer_name ? (f.organizer_url ? `<a href="${f.organizer_url}" target="_blank" style="color:var(--accent)">${f.organizer_name}</a>` : f.organizer_name) : '—'}</div></div>
     </div>
-    <p class="modal-desc">${f.description}</p>
-    <a href="${f.website}" target="_blank" class="modal-website">🌐 Official Website →</a>
+    <p class="modal-desc">${f.description||''}</p>
+    ${(f.event_url||f.website) ? `<a href="${f.event_url||f.website}" target="_blank" class="modal-website">🌐 Official Website →</a>` : ''}
   `;
   document.getElementById('modalOverlay').classList.add('open');
 }
