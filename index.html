@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexpo — World Trade Fairs</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+:root {
+  --bg:#0a0d12; --surface:#111520; --surface2:#181e2e; --border:#1e2638;
+  --accent:#3b82f6; --accent2:#06b6d4; --gold:#f59e0b;
+  --text:#e2e8f0; --muted:#64748b; --success:#10b981;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(59,130,246,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(59,130,246,.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+
+/* HEADER */
+header{position:sticky;top:0;z-index:200;background:rgba(10,13,18,.94);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:0 2rem;}
+.header-inner{max-width:1500px;margin:0 auto;height:64px;display:flex;align-items:center;justify-content:space-between;gap:1rem;}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none;}
+.logo-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+.logo-text{font-family:'Syne',sans-serif;font-weight:800;font-size:1.2rem;color:var(--text);}
+.logo-text span{color:var(--accent);}
+.header-stats{display:flex;gap:2rem;font-size:.8rem;color:var(--muted);}
+.header-stats strong{color:var(--text);}
+.header-right{display:flex;gap:10px;align-items:center;}
+.view-toggle{display:flex;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:4px;}
+.view-btn{background:transparent;border:none;color:var(--muted);padding:5px 12px;border-radius:5px;cursor:pointer;font-size:.82rem;transition:all .2s;display:flex;align-items:center;gap:5px;}
+.view-btn.active{background:var(--accent);color:#fff;}
+.header-cta{background:var(--accent);color:#fff;border:none;padding:8px 18px;border-radius:6px;font-family:'DM Sans',sans-serif;font-weight:500;font-size:.82rem;cursor:pointer;transition:all .2s;}
+.header-cta:hover{background:#2563eb;}
+
+/* HERO */
+.hero{position:relative;z-index:1;padding:4rem 2rem 2.5rem;text-align:center;}
+.hero-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.2);color:var(--accent);padding:4px 14px;border-radius:100px;font-size:.75rem;font-weight:500;margin-bottom:1.2rem;letter-spacing:.5px;}
+h1{font-family:'Syne',sans-serif;font-size:clamp(2.2rem,5vw,4rem);font-weight:800;line-height:1.1;margin-bottom:.8rem;background:linear-gradient(135deg,#e2e8f0 0%,#94a3b8 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+h1 em{font-style:normal;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.hero-sub{color:var(--muted);font-size:1rem;max-width:520px;margin:0 auto 2rem;line-height:1.6;}
+.search-wrap{max-width:680px;margin:0 auto 1rem;position:relative;}
+.search-bar{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:13px 18px 13px 50px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.95rem;outline:none;transition:all .2s;}
+.search-bar::placeholder{color:var(--muted);}
+.search-bar:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,130,246,.1);}
+.search-icon{position:absolute;left:17px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:1rem;}
+.result-info{text-align:center;font-size:.78rem;color:var(--muted);margin-bottom:1.5rem;}
+
+/* FILTERS */
+.filters{position:relative;z-index:1;max-width:1500px;margin:0 auto;padding:0 2rem 1.5rem;}
+.filter-label{font-size:.7rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:.5rem;}
+.chips{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:1rem;}
+.chip{padding:5px 14px;border-radius:100px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:.78rem;cursor:pointer;transition:all .2s;}
+.chip:hover{border-color:var(--accent);color:var(--text);}
+.chip.active{background:rgba(59,130,246,.15);border-color:var(--accent);color:var(--accent);}
+.filter-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+.fsel{background:var(--surface);border:1px solid var(--border);color:var(--text);padding:6px 12px;border-radius:7px;font-family:'DM Sans',sans-serif;font-size:.78rem;cursor:pointer;outline:none;transition:border-color .2s;}
+.fsel:focus{border-color:var(--accent);}
+.fsel option{background:#111520;}
+
+/* SECTION TOP */
+.section-top{max-width:1500px;margin:0 auto;padding:0 2rem 1rem;display:flex;align-items:center;justify-content:space-between;}
+.section-title{font-family:'Syne',sans-serif;font-weight:700;font-size:.95rem;color:var(--text);}
+
+/* LIST VIEW */
+.list-wrap{position:relative;z-index:1;max-width:1500px;margin:0 auto;padding:0 2rem 4rem;}
+.fairs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;}
+
+/* MAP VIEW */
+.map-wrap{position:relative;z-index:1;max-width:1500px;margin:0 auto;padding:0 2rem 4rem;}
+.map-layout{display:grid;grid-template-columns:1fr 360px;gap:16px;height:620px;}
+#map{border-radius:14px;border:1px solid var(--border);overflow:hidden;}
+.map-sidebar{overflow-y:auto;display:flex;flex-direction:column;gap:8px;}
+.map-sidebar::-webkit-scrollbar{width:3px;}
+.map-sidebar::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+.map-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;cursor:pointer;transition:all .2s;}
+.map-card:hover,.map-card.highlighted{border-color:var(--accent);background:rgba(59,130,246,.06);}
+.map-card-name{font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;margin-bottom:3px;}
+.map-card-meta{font-size:.75rem;color:var(--muted);}
+.map-card-date{font-size:.73rem;color:var(--accent2);margin-top:3px;}
+
+/* FAIR CARD */
+.fair-card{background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:18px;cursor:pointer;transition:all .25s;position:relative;overflow:hidden;animation:fadeUp .35s both;}
+.fair-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent2));opacity:0;transition:opacity .2s;}
+.fair-card:hover{border-color:rgba(59,130,246,.3);transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,0,0,.3);}
+.fair-card:hover::before{opacity:1;}
+.card-header{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px;}
+.card-logo{width:44px;height:44px;border-radius:9px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;}
+.card-badges{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end;}
+.badge{padding:3px 9px;border-radius:100px;font-size:.68rem;font-weight:500;}
+.b-sector{background:rgba(59,130,246,.12);color:#93c5fd;border:1px solid rgba(59,130,246,.2);}
+.b-upcoming{background:rgba(16,185,129,.12);color:#6ee7b7;border:1px solid rgba(16,185,129,.2);}
+.b-ongoing{background:rgba(245,158,11,.12);color:#fcd34d;border:1px solid rgba(245,158,11,.2);animation:pulse 2s infinite;}
+.b-past{background:rgba(100,116,139,.12);color:#94a3b8;border:1px solid rgba(100,116,139,.2);}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+.card-name{font-family:'Syne',sans-serif;font-weight:700;font-size:.95rem;margin-bottom:3px;}
+.card-edition{font-size:.72rem;color:var(--muted);margin-bottom:12px;}
+.card-info{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;}
+.info-row{display:flex;align-items:center;gap:7px;font-size:.78rem;color:var(--muted);}
+.info-icon{font-size:.8rem;width:15px;text-align:center;}
+.info-row strong{color:var(--text);font-weight:500;}
+.card-footer{display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid var(--border);}
+.visitor-stat{display:flex;align-items:center;gap:5px;font-size:.74rem;color:var(--muted);}
+.visitor-stat strong{color:var(--gold);font-family:'Syne',sans-serif;font-size:.85rem;}
+.card-actions{display:flex;gap:6px;}
+.btn-fav{background:transparent;border:1px solid var(--border);color:var(--muted);width:28px;height:28px;border-radius:5px;cursor:pointer;font-size:.8rem;transition:all .2s;display:flex;align-items:center;justify-content:center;}
+.btn-fav:hover,.btn-fav.active{background:rgba(245,158,11,.1);border-color:var(--gold);color:var(--gold);}
+.btn-detail{background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.2);color:var(--accent);padding:4px 12px;border-radius:5px;cursor:pointer;font-size:.74rem;font-family:'DM Sans',sans-serif;font-weight:500;transition:all .2s;}
+.btn-detail:hover{background:rgba(59,130,246,.2);}
+.countdown{font-size:.72rem;color:var(--muted);}
+.cval{font-family:'Syne',sans-serif;font-weight:700;color:var(--accent2);font-size:.82rem;}
+.empty{grid-column:1/-1;text-align:center;padding:5rem 2rem;color:var(--muted);}
+.empty-icon{font-size:2.5rem;margin-bottom:.8rem;}
+.empty h3{font-family:'Syne',sans-serif;color:var(--text);margin-bottom:.4rem;}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(10px);z-index:1000;align-items:center;justify-content:center;padding:2rem;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;max-width:580px;width:100%;max-height:82vh;overflow-y:auto;padding:26px;position:relative;}
+.modal::-webkit-scrollbar{width:3px;}
+.modal::-webkit-scrollbar-thumb{background:var(--border);}
+.modal-close{position:absolute;top:14px;right:14px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);width:30px;height:30px;border-radius:5px;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;transition:all .2s;}
+.modal-close:hover{color:var(--text);}
+.modal-tag{display:inline-flex;align-items:center;gap:5px;background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.2);color:var(--accent);padding:3px 11px;border-radius:100px;font-size:.72rem;margin-bottom:.9rem;}
+.modal-title{font-family:'Syne',sans-serif;font-weight:800;font-size:1.4rem;margin-bottom:4px;}
+.modal-subtitle{color:var(--muted);font-size:.83rem;margin-bottom:1.3rem;line-height:1.5;}
+.modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1.3rem;}
+.mstat{background:var(--surface2);border-radius:9px;padding:12px;border:1px solid var(--border);}
+.mstat-label{font-size:.67rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;}
+.mstat-value{font-family:'Syne',sans-serif;font-weight:700;font-size:.9rem;color:var(--text);}
+.modal-desc{color:var(--muted);font-size:.84rem;line-height:1.7;margin-bottom:1.2rem;}
+.modal-website{display:inline-flex;align-items:center;gap:7px;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.15);color:var(--accent);padding:9px 16px;border-radius:7px;text-decoration:none;font-size:.82rem;font-weight:500;transition:all .2s;}
+.modal-website:hover{background:rgba(59,130,246,.15);}
+
+/* LEAFLET CUSTOM */
+.leaflet-container{background:#0d1117 !important;}
+.expo-marker{background:var(--accent);border:2px solid rgba(255,255,255,.3);border-radius:50%;width:12px;height:12px;cursor:pointer;transition:all .2s;}
+.expo-marker:hover{background:var(--accent2);transform:scale(1.4);}
+.expo-popup .leaflet-popup-content-wrapper{background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,.5);padding:0;}
+.expo-popup .leaflet-popup-content{margin:0;padding:12px 14px;}
+.expo-popup .leaflet-popup-tip-container{display:none;}
+.popup-name{font-family:'Syne',sans-serif;font-weight:700;font-size:.85rem;color:var(--text);margin-bottom:3px;}
+.popup-city{font-size:.75rem;color:var(--muted);}
+.popup-date{font-size:.73rem;color:var(--accent2);margin-top:3px;}
+.popup-btn{margin-top:7px;background:rgba(59,130,246,.15);border:none;color:var(--accent);padding:4px 10px;border-radius:5px;cursor:pointer;font-size:.72rem;width:100%;}
+
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+
+@media(max-width:900px){.map-layout{grid-template-columns:1fr;height:auto;}.map-sidebar{max-height:260px;}.header-stats{display:none;}.fairs-grid{grid-template-columns:1fr;}.modal-grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <a class="logo" href="#">
+      <div class="logo-icon">🌐</div>
+      <span class="logo-text">Nex<span>po</span></span>
+    </a>
+    <div class="header-stats">
+      <span><strong id="hCount">0</strong> Fairs</span>
+      <span><strong id="hCountries">0</strong> Countries</span>
+      <span><strong>14</strong> Sectors</span>
+    </div>
+    <div class="header-right">
+      <div class="view-toggle">
+        <button class="view-btn active" id="btnList" onclick="setView('list')">☰ List</button>
+        <button class="view-btn" id="btnMap" onclick="setView('map')">🗺 Map</button>
+      </div>
+      <button class="header-cta">Upgrade to Pro ✦</button>
+    </div>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="hero-badge">🌍 nexpo.app — The Global Trade Fair Directory</div>
+  <h1>Track Every <em>World Trade Fair</em><br>in One Place</h1>
+  <p class="hero-sub">Discover trade fairs by industry, country and date. Never miss a global opportunity.</p>
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input type="text" class="search-bar" id="searchInput" placeholder="Search by name, city, country or sector…" oninput="applyFilters()">
+  </div>
+  <div class="result-info" id="resultInfo"></div>
+</section>
+
+<div class="filters">
+  <div class="filter-label">Sector</div>
+  <div class="chips" id="sectorChips"></div>
+  <div class="filter-row">
+    <select class="fsel" id="countryFilter" onchange="applyFilters()"><option value="">🌍 All Countries</option></select>
+    <select class="fsel" id="monthFilter" onchange="applyFilters()">
+      <option value="">📅 All Months</option>
+      <option value="1">January</option><option value="2">February</option><option value="3">March</option>
+      <option value="4">April</option><option value="5">May</option><option value="6">June</option>
+      <option value="7">July</option><option value="8">August</option><option value="9">September</option>
+      <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+    </select>
+    <select class="fsel" id="statusFilter" onchange="applyFilters()">
+      <option value="">📌 All Status</option>
+      <option value="upcoming">Upcoming</option>
+      <option value="ongoing">Ongoing</option>
+      <option value="past">Past</option>
+    </select>
+    <select class="fsel" id="regionFilter" onchange="applyFilters()">
+      <option value="">🗺 All Regions</option>
+      <option value="Europe">Europe</option>
+      <option value="Asia">Asia</option>
+      <option value="Americas">Americas</option>
+      <option value="Middle East">Middle East</option>
+      <option value="Africa">Africa</option>
+      <option value="Oceania">Oceania</option>
+    </select>
+  </div>
+</div>
+
+<div class="section-top">
+  <span class="section-title" id="sectionTitle">All Fairs</span>
+  <select class="fsel" id="sortSelect" onchange="applyFilters()">
+    <option value="date">Sort by Date</option>
+    <option value="name">Sort by Name</option>
+    <option value="visitors">Sort by Visitors</option>
+  </select>
+</div>
+
+<!-- LIST VIEW -->
+<div class="list-wrap" id="listView">
+  <div class="fairs-grid" id="fairsGrid"></div>
+</div>
+
+<!-- MAP VIEW -->
+<div class="map-wrap" id="mapView" style="display:none;">
+  <div class="map-layout">
+    <div id="map"></div>
+    <div class="map-sidebar" id="mapSidebar"></div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal"><button class="modal-close" onclick="closeModalBtn()">✕</button><div id="modalBody"></div></div>
+</div>
+
+<script>
+const TODAY = new Date();
+
+const SECTORS = [
+  {id:'all',label:'✦ All'},
+  {id:'packaging',label:'📦 Packaging'},
+  {id:'textile',label:'🧵 Textile'},
+  {id:'electronics',label:'⚡ Electronics'},
+  {id:'food',label:'🍽 Food & Beverage'},
+  {id:'construction',label:'🏗 Construction'},
+  {id:'automotive',label:'🚗 Automotive'},
+  {id:'health',label:'🏥 Healthcare'},
+  {id:'agriculture',label:'🌾 Agriculture'},
+  {id:'furniture',label:'🪑 Furniture'},
+  {id:'energy',label:'💡 Energy'},
+  {id:'chemicals',label:'⚗ Chemicals'},
+  {id:'defence',label:'🛡 Defence'},
+  {id:'other',label:'🌐 Other'},
+];
+
+const REGIONS = {
+  'Germany':'Europe','Italy':'Europe','France':'Europe','Spain':'Europe',
+  'United Kingdom':'Europe','Netherlands':'Europe','Belgium':'Europe',
+  'Switzerland':'Europe','Poland':'Europe','Czech Republic':'Europe',
+  'Austria':'Europe','Sweden':'Europe','Norway':'Europe','Portugal':'Europe',
+  'Finland':'Europe','Denmark':'Europe','Hungary':'Europe','Serbia':'Europe',
+  'Romania':'Europe','Greece':'Europe',
+  'USA':'Americas','Canada':'Americas','Brazil':'Americas','Mexico':'Americas',
+  'Argentina':'Americas','Colombia':'Americas','Chile':'Americas',
+  'China':'Asia','Japan':'Asia','South Korea':'Asia','India':'Asia',
+  'Thailand':'Asia','Singapore':'Asia','Malaysia':'Asia','Vietnam':'Asia',
+  'Indonesia':'Asia','Taiwan':'Asia','Hong Kong':'Asia',
+  'UAE':'Middle East','Saudi Arabia':'Middle East','Egypt':'Middle East',
+  'Israel':'Middle East','Turkey':'Middle East','Kazakhstan':'Middle East',
+  'South Africa':'Africa','Kenya':'Africa','Nigeria':'Africa','Morocco':'Africa',
+  'Australia':'Oceania','New Zealand':'Oceania',
+  'Russia':'Europe',
+};
+
+const FAIRS = [
+  // ─── PACKAGING & PRINTING ───────────────────────────────────────────────
+  {id:1,name:'drupa',fullName:'drupa — International Trade Fair for Printing Technologies',edition:'2028',icon:'🖨️',sector:'packaging',sectorLabel:'Packaging & Print',city:'Düsseldorf',country:'Germany',lat:51.2217,lng:6.7762,venue:'Messe Düsseldorf',startDate:new Date('2028-05-28'),endDate:new Date('2028-06-07'),visitors:'260,000',exhibitors:'1,800',website:'https://www.drupa.com',description:'The world\'s leading trade fair for printing technologies. Held every 4 years, drupa is the flagship event for the entire print and packaging industry.',freq:'Every 4 Years'},
+  {id:2,name:'Interpack',fullName:'Interpack — Packaging & Processes',edition:'2026',icon:'📦',sector:'packaging',sectorLabel:'Packaging',city:'Düsseldorf',country:'Germany',lat:51.2217,lng:6.7762,venue:'Messe Düsseldorf',startDate:new Date('2026-05-07'),endDate:new Date('2026-05-13'),visitors:'170,000',exhibitors:'2,800',website:'https://www.interpack.com',description:'The global leader in packaging and processing. All machinery, materials and solutions for the packaging sector under one roof.',freq:'Every 3 Years'},
+  {id:3,name:'EuroShop',fullName:'EuroShop — The World\'s No.1 Retail Trade Fair',edition:'2026',icon:'🛍️',sector:'packaging',sectorLabel:'Retail & Store',city:'Düsseldorf',country:'Germany',lat:51.2217,lng:6.7762,venue:'Messe Düsseldorf',startDate:new Date('2026-02-22'),endDate:new Date('2026-02-26'),visitors:'94,000',exhibitors:'2,200',website:'https://www.euroshop-tradefair.com',description:'The world\'s number one retail trade fair. Shop design, shelving systems and packaging solutions for the retail sector.',freq:'Every 3 Years'},
+  {id:4,name:'CorrExpo',fullName:'CorrExpo — Corrugated Industry Exhibition',edition:'2025',icon:'📐',sector:'packaging',sectorLabel:'Corrugated',city:'Nashville',country:'USA',lat:36.1627,lng:-86.7816,venue:'Music City Center',startDate:new Date('2025-09-22'),endDate:new Date('2025-09-25'),visitors:'4,500',exhibitors:'300',website:'https://www.correxpo.org',description:'The premier corrugated packaging industry exhibition in North America. Machinery, materials and service providers.',freq:'Every 2 Years'},
+  {id:5,name:'PACK EXPO International',fullName:'PACK EXPO International — Packaging & Processing Show',edition:'2026',icon:'🏭',sector:'packaging',sectorLabel:'Packaging',city:'Chicago',country:'USA',lat:41.8827,lng:-87.6233,venue:'McCormick Place',startDate:new Date('2026-11-08'),endDate:new Date('2026-11-11'),visitors:'49,000',exhibitors:'2,600',website:'https://www.packexpointernational.com',description:'North America\'s largest packaging and processing technologies exhibition.',freq:'Every 2 Years'},
+  {id:6,name:'Eurasia Packaging',fullName:'Eurasia Packaging Istanbul — International Packaging Industry Fair',edition:'2026',icon:'📦',sector:'packaging',sectorLabel:'Packaging',city:'Istanbul',country:'Turkey',lat:41.0082,lng:28.9784,venue:'Tüyap Fair Center',startDate:new Date('2026-04-09'),endDate:new Date('2026-04-12'),visitors:'35,000',exhibitors:'900',website:'https://www.eurasiapackaging.com',description:'Eurasia\'s largest packaging fair. Machinery, materials and design solutions.',freq:'Every 2 Years'},
+  {id:7,name:'ProPak Asia',fullName:'ProPak Asia — Processing & Packaging Technology Exhibition',edition:'2026',icon:'📦',sector:'packaging',sectorLabel:'Packaging',city:'Bangkok',country:'Thailand',lat:13.7563,lng:100.5018,venue:'BITEC Bangkok',startDate:new Date('2026-06-17'),endDate:new Date('2026-06-20'),visitors:'31,000',exhibitors:'1,500',website:'https://www.propakasia.com',description:'Southeast Asia\'s largest processing and packaging technology exhibition.',freq:'Annual'},
+  {id:8,name:'China Packaging Fair',fullName:'China International Exhibition for Packaging Industry',edition:'2026',icon:'📦',sector:'packaging',sectorLabel:'Packaging',city:'Shanghai',country:'China',lat:31.2304,lng:121.4737,venue:'SNIEC Shanghai',startDate:new Date('2026-06-15'),endDate:new Date('2026-06-18'),visitors:'80,000',exhibitors:'2,000',website:'https://www.chinapackagingfair.com',description:'Asia\'s largest packaging fair. Machinery, materials and design solutions.',freq:'Annual'},
+  {id:9,name:'KOREA PACK',fullName:'Korea International Packaging Show',edition:'2026',icon:'📦',sector:'packaging',sectorLabel:'Packaging',city:'Seoul',country:'South Korea',lat:37.5665,lng:126.978,venue:'KINTEX Ilsan',startDate:new Date('2026-07-15'),endDate:new Date('2026-07-18'),visitors:'40,000',exhibitors:'700',website:'https://www.koreapack.org',description:'Korea\'s international packaging exhibition.',freq:'Every 2 Years'},
+  {id:10,name:'The Packaging Show',fullName:'The Packaging Show — UK Packaging Exhibition',edition:'2026',icon:'📦',sector:'packaging',sectorLabel:'Packaging',city:'Birmingham',country:'United Kingdom',lat:52.4862,lng:-1.8904,venue:'NEC Birmingham',startDate:new Date('2026-09-16'),endDate:new Date('2026-09-18'),visitors:'12,000',exhibitors:'550',website:'https://thepackagingshow.co.uk',description:'United Kingdom\'s leading packaging sector exhibition.',freq:'Annual'},
+  {id:11,name:'IPACK-IMA',fullName:'IPACK-IMA — Processing & Packaging Machinery Show',edition:'2026',icon:'🔧',sector:'packaging',sectorLabel:'Pack Machinery',city:'Milan',country:'Italy',lat:45.4654,lng:9.1859,venue:'Fiera Milano Rho',startDate:new Date('2026-05-27'),endDate:new Date('2026-05-30'),visitors:'60,000',exhibitors:'2,500',website:'https://www.ipackima.com',description:'Italy\'s international processing and packaging machinery exhibition.',freq:'Every 3 Years'},
+  {id:12,name:'Empack Portugal',fullName:'Empack Portugal — Packaging & Logistics Technology',edition:'2026',icon:'📦',sector:'packaging',sectorLabel:'Packaging',city:'Porto',country:'Portugal',lat:41.1579,lng:-8.6291,venue:'Exponor',startDate:new Date('2026-11-04'),endDate:new Date('2026-11-06'),visitors:'10,000',exhibitors:'350',website:'https://www.empack.pt',description:'Portugal\'s packaging and logistics technology fair.',freq:'Every 2 Years'},
+  {id:13,name:'Indo Pack',fullName:'Indo Pack — Packaging Machinery Exhibition Indonesia',edition:'2026',icon:'📦',sector:'packaging',sectorLabel:'Packaging',city:'Jakarta',country:'Indonesia',lat:-6.2088,lng:106.8456,venue:'JIExpo Kemayoran',startDate:new Date('2026-11-18'),endDate:new Date('2026-11-21'),visitors:'22,000',exhibitors:'700',website:'https://www.indopack.net',description:'Indonesia\'s international packaging machinery and materials fair.',freq:'Every 2 Years'},
+  {id:14,name:'Auspack',fullName:'Auspack — Packaging & Processing Equipment & Materials',edition:'2027',icon:'📦',sector:'packaging',sectorLabel:'Packaging',city:'Melbourne',country:'Australia',lat:-37.8136,lng:144.9631,venue:'Melbourne Convention Centre',startDate:new Date('2027-03-24'),endDate:new Date('2027-03-27'),visitors:'12,000',exhibitors:'420',website:'https://www.auspack.com.au',description:'Australia\'s largest packaging technology fair.',freq:'Every 2 Years'},
+
+  // ─── TEXTILE & FASHION ──────────────────────────────────────────────────
+  {id:20,name:'ITMA',fullName:'ITMA — International Textile Machinery Exhibition',edition:'2027',icon:'🧵',sector:'textile',sectorLabel:'Textile Machinery',city:'Milan',country:'Italy',lat:45.5173,lng:9.0892,venue:'Fiera Milano',startDate:new Date('2027-06-07'),endDate:new Date('2027-06-13'),visitors:'109,000',exhibitors:'1,700',website:'https://www.itma.com',description:'The world\'s largest international exhibition for textile and garment technology. Held every 4 years.',freq:'Every 4 Years'},
+  {id:21,name:'Heimtextil',fullName:'Heimtextil — International Trade Fair for Home and Contract Textiles',edition:'2026',icon:'🏠',sector:'textile',sectorLabel:'Home Textiles',city:'Frankfurt',country:'Germany',lat:50.1109,lng:8.6821,venue:'Messe Frankfurt',startDate:new Date('2026-01-13'),endDate:new Date('2026-01-16'),visitors:'67,000',exhibitors:'2,900',website:'https://heimtextil.messefrankfurt.com',description:'The world\'s leading trade fair for home and contract textiles.',freq:'Annual'},
+  {id:22,name:'Lineapelle',fullName:'Lineapelle — International Exhibition of Leather, Accessories & Components',edition:'2026',icon:'👜',sector:'textile',sectorLabel:'Leather & Accessories',city:'Milan',country:'Italy',lat:45.4654,lng:9.1859,venue:'Fiera Milano Rho',startDate:new Date('2026-02-17'),endDate:new Date('2026-02-19'),visitors:'22,000',exhibitors:'1,200',website:'https://www.lineapelle-fair.it',description:'The international fair for leather, accessories and components.',freq:'Twice a Year'},
+  {id:23,name:'Texworld Paris',fullName:'Texworld Paris — International Fabric Sourcing Show',edition:'2026',icon:'🧶',sector:'textile',sectorLabel:'Fabrics',city:'Paris',country:'France',lat:48.8566,lng:2.3522,venue:'Paris Le Bourget',startDate:new Date('2026-01-20'),endDate:new Date('2026-01-23'),visitors:'20,000',exhibitors:'1,000',website:'https://paris.texworld-global.com',description:'The leading global platform for international fabric sourcing and textile design.',freq:'Twice a Year'},
+  {id:24,name:'Canton Fair',fullName:'China Import and Export Fair (Canton Fair)',edition:'2026',icon:'🇨🇳',sector:'textile',sectorLabel:'General Trade',city:'Guangzhou',country:'China',lat:23.1291,lng:113.2644,venue:'Canton Fair Complex',startDate:new Date('2026-04-15'),endDate:new Date('2026-05-05'),visitors:'200,000',exhibitors:'25,000',website:'https://www.cantonfair.org.cn',description:'The world\'s largest trade fair held twice a year in Guangzhou. Covers all major industries.',freq:'Twice a Year'},
+  {id:25,name:'Vietnam EXPO',fullName:'Vietnam International Trade Fair',edition:'2026',icon:'🌏',sector:'textile',sectorLabel:'General Trade',city:'Hanoi',country:'Vietnam',lat:21.0285,lng:105.8542,venue:'Vietnam Expo Center',startDate:new Date('2026-04-08'),endDate:new Date('2026-04-11'),visitors:'40,000',exhibitors:'1,000',website:'https://www.vietnamexpo.com.vn',description:'Vietnam\'s international trade fair, focused on textile and manufacturing.',freq:'Annual'},
+  {id:26,name:'Texprocess',fullName:'Texprocess — International Trade Fair for Processing Textile and Flexible Materials',edition:'2027',icon:'🧵',sector:'textile',sectorLabel:'Textile Processing',city:'Frankfurt',country:'Germany',lat:50.1109,lng:8.6821,venue:'Messe Frankfurt',startDate:new Date('2027-05-13'),endDate:new Date('2027-05-16'),visitors:'21,000',exhibitors:'330',website:'https://texprocess.messefrankfurt.com',description:'The leading international trade fair for the processing of textile and flexible materials.',freq:'Every 2 Years'},
+  {id:27,name:'Denim Premiere Vision',fullName:'Denim Premiere Vision — International Denim Fabrics & Innovation Show',edition:'2025',icon:'👖',sector:'textile',sectorLabel:'Denim',city:'Barcelona',country:'Spain',lat:41.3851,lng:2.1734,venue:'Fira de Barcelona',startDate:new Date('2025-11-19'),endDate:new Date('2025-11-20'),visitors:'8,000',exhibitors:'200',website:'https://www.denimpremierevision.com',description:'The global reference for denim innovation, fabrics, and trends.',freq:'Twice a Year'},
+
+  // ─── ELECTRONICS & TECHNOLOGY ───────────────────────────────────────────
+  {id:30,name:'CES',fullName:'Consumer Electronics Show',edition:'2026',icon:'🖥️',sector:'electronics',sectorLabel:'Consumer Electronics',city:'Las Vegas',country:'USA',lat:36.1699,lng:-115.1398,venue:'Las Vegas Convention Center',startDate:new Date('2026-01-06'),endDate:new Date('2026-01-09'),visitors:'130,000',exhibitors:'4,300',website:'https://www.ces.tech',description:'The world\'s most influential technology trade fair. Held every January in Las Vegas.',freq:'Annual'},
+  {id:31,name:'Hannover Messe',fullName:'Hannover Messe — World\'s Leading Trade Show for Industrial Technology',edition:'2026',icon:'⚙️',sector:'electronics',sectorLabel:'Industrial Technology',city:'Hannover',country:'Germany',lat:52.3759,lng:9.7369,venue:'Deutsche Messe',startDate:new Date('2026-04-27'),endDate:new Date('2026-05-01'),visitors:'215,000',exhibitors:'6,500',website:'https://www.hannovermesse.de',description:'The world\'s leading industrial technology event. Automation, robotics, energy and digital transformation.',freq:'Annual'},
+  {id:32,name:'MWC Barcelona',fullName:'Mobile World Congress Barcelona',edition:'2026',icon:'📱',sector:'electronics',sectorLabel:'Mobile & Telecom',city:'Barcelona',country:'Spain',lat:41.3851,lng:2.1734,venue:'Fira de Barcelona Gran Via',startDate:new Date('2026-03-02'),endDate:new Date('2026-03-05'),visitors:'100,000',exhibitors:'2,400',website:'https://www.mwcbarcelona.com',description:'The world congress and exhibition for mobile and telecommunications technologies.',freq:'Annual'},
+  {id:33,name:'GITEX Global',fullName:'GITEX Global — Gulf Information Technology Exhibition',edition:'2026',icon:'🌐',sector:'electronics',sectorLabel:'Technology & Digital',city:'Dubai',country:'UAE',lat:25.2048,lng:55.2708,venue:'Dubai World Trade Centre',startDate:new Date('2026-10-13'),endDate:new Date('2026-10-17'),visitors:'180,000',exhibitors:'6,500',website:'https://www.gitex.com',description:'The MENA region\'s largest technology fair. Held every October in Dubai.',freq:'Annual'},
+  {id:34,name:'NAB Show',fullName:'NAB Show — National Association of Broadcasters',edition:'2026',icon:'📺',sector:'electronics',sectorLabel:'Broadcasting & Media',city:'Las Vegas',country:'USA',lat:36.1699,lng:-115.1398,venue:'Las Vegas Convention Center',startDate:new Date('2026-04-18'),endDate:new Date('2026-04-23'),visitors:'90,000',exhibitors:'1,700',website:'https://www.nabshow.com',description:'The world\'s fair for broadcasting, media and entertainment technologies.',freq:'Annual'},
+  {id:35,name:'CIIF',fullName:'China International Industry Fair',edition:'2026',icon:'🏭',sector:'electronics',sectorLabel:'Industrial',city:'Shanghai',country:'China',lat:31.2304,lng:121.4737,venue:'SNIEC Shanghai',startDate:new Date('2026-11-05'),endDate:new Date('2026-11-09'),visitors:'180,000',exhibitors:'2,800',website:'https://www.ciif-expo.com',description:'China\'s most prestigious industrial technology fair. Smart manufacturing and automation focused.',freq:'Annual'},
+  {id:36,name:'Japan IT Week',fullName:'Japan IT Week — International IT Fair',edition:'2026',icon:'💻',sector:'electronics',sectorLabel:'IT',city:'Tokyo',country:'Japan',lat:35.6762,lng:139.6503,venue:'Tokyo Big Sight',startDate:new Date('2026-05-13'),endDate:new Date('2026-05-15'),visitors:'150,000',exhibitors:'3,000',website:'https://www.japan-it.jp',description:'Asia\'s largest IT fair, held twice a year in Tokyo.',freq:'Twice a Year'},
+  {id:37,name:'JIMTOF',fullName:'JIMTOF — Japan International Machine Tool Fair',edition:'2026',icon:'🔩',sector:'electronics',sectorLabel:'Machine Tools',city:'Tokyo',country:'Japan',lat:35.6762,lng:139.6503,venue:'Tokyo Big Sight',startDate:new Date('2026-11-05'),endDate:new Date('2026-11-10'),visitors:'140,000',exhibitors:'1,100',website:'https://www.jimtof.org',description:'Japan\'s international machine tool fair, held every 2 years in Tokyo.',freq:'Every 2 Years'},
+  {id:38,name:'ISE',fullName:'Integrated Systems Europe — AV & Systems Integration Show',edition:'2026',icon:'🖥️',sector:'electronics',sectorLabel:'AV & Systems',city:'Amsterdam',country:'Netherlands',lat:52.3676,lng:4.9041,venue:'RAI Amsterdam',startDate:new Date('2026-02-03'),endDate:new Date('2026-02-06'),visitors:'70,000',exhibitors:'1,400',website:'https://www.iseurope.org',description:'Europe\'s largest audio-visual and integrated systems exhibition.',freq:'Annual'},
+  {id:39,name:'WIN Eurasia',fullName:'WIN Eurasia — Industrial Automation & Technology Fair',edition:'2026',icon:'⚙️',sector:'electronics',sectorLabel:'Industrial Automation',city:'Istanbul',country:'Turkey',lat:41.0082,lng:28.9784,venue:'Tüyap Fair Center',startDate:new Date('2026-02-26'),endDate:new Date('2026-03-01'),visitors:'55,000',exhibitors:'900',website:'https://www.win-eurasia.com',description:'Eurasia\'s leading industrial automation and technology fair.',freq:'Every 2 Years'},
+  {id:40,name:'Cairo ICT',fullName:'Cairo ICT — International Exhibition for Communication & IT',edition:'2026',icon:'📡',sector:'electronics',sectorLabel:'IT & Telecom',city:'Cairo',country:'Egypt',lat:30.0444,lng:31.2357,venue:'Cairo International Convention Centre',startDate:new Date('2026-11-23'),endDate:new Date('2026-11-26'),visitors:'40,000',exhibitors:'800',website:'https://www.cairoict.com',description:'Africa and the Middle East\'s largest IT fair.',freq:'Annual'},
+  {id:41,name:'Metaltech Malaysia',fullName:'Metaltech — International Machine Tool & Metal Working Exhibition',edition:'2026',icon:'🔩',sector:'electronics',sectorLabel:'Metalworking',city:'Kuala Lumpur',country:'Malaysia',lat:3.139,lng:101.6869,venue:'MITEC Kuala Lumpur',startDate:new Date('2026-05-13'),endDate:new Date('2026-05-17'),visitors:'25,000',exhibitors:'700',website:'https://www.metaltech.com.my',description:'Southeast Asia\'s machine tool and metalworking fair.',freq:'Annual'},
+  {id:42,name:'Elmia Subcontractor',fullName:'Elmia Subcontractor — International Fair for Subcontracting',edition:'2025',icon:'⚙️',sector:'electronics',sectorLabel:'Subcontracting',city:'Jönköping',country:'Sweden',lat:57.7826,lng:14.1618,venue:'Elmia AB',startDate:new Date('2025-11-11'),endDate:new Date('2025-11-14'),visitors:'25,000',exhibitors:'1,400',website:'https://www.elmia.se',description:'The Nordic region\'s subcontracting and manufacturing fair.',freq:'Every 2 Years'},
+
+  // ─── FOOD & BEVERAGE ────────────────────────────────────────────────────
+  {id:50,name:'ANUGA',fullName:'ANUGA — International Food & Beverage Fair',edition:'2027',icon:'🍽️',sector:'food',sectorLabel:'Food & Beverage',city:'Cologne',country:'Germany',lat:50.9333,lng:6.9833,venue:'Koelnmesse',startDate:new Date('2027-10-04'),endDate:new Date('2027-10-08'),visitors:'155,000',exhibitors:'7,900',website:'https://www.anuga.com',description:'The world\'s largest food and beverage trade fair. Held every 2 years in Cologne.',freq:'Every 2 Years'},
+  {id:51,name:'SIAL Paris',fullName:'SIAL Paris — International Food & Beverage Exhibition',edition:'2026',icon:'🥐',sector:'food',sectorLabel:'Food & Beverage',city:'Paris',country:'France',lat:48.8566,lng:2.3522,venue:'Paris Nord Villepinte',startDate:new Date('2026-10-19'),endDate:new Date('2026-10-23'),visitors:'340,000',exhibitors:'7,200',website:'https://www.sialparis.com',description:'The world\'s largest food innovation fair. Held every 2 years in Paris.',freq:'Every 2 Years'},
+  {id:52,name:'Gulfood',fullName:'Gulfood — World\'s Largest Annual Food & Beverage Trade Exhibition',edition:'2026',icon:'🥙',sector:'food',sectorLabel:'Food & Beverage',city:'Dubai',country:'UAE',lat:25.2048,lng:55.2708,venue:'Dubai World Trade Centre',startDate:new Date('2026-02-23'),endDate:new Date('2026-02-27'),visitors:'97,000',exhibitors:'5,000',website:'https://www.gulfood.com',description:'The world\'s largest annual food and beverage exhibition. Held every February in Dubai.',freq:'Annual'},
+  {id:53,name:'IFFA',fullName:'IFFA — Technology for Meat and Alternative Proteins',edition:'2028',icon:'🥩',sector:'food',sectorLabel:'Meat Technology',city:'Frankfurt',country:'Germany',lat:50.1109,lng:8.6821,venue:'Messe Frankfurt',startDate:new Date('2028-05-03'),endDate:new Date('2028-05-08'),visitors:'63,000',exhibitors:'1,000',website:'https://iffa.messefrankfurt.com',description:'The world\'s leading fair for meat processing and alternative protein technologies.',freq:'Every 3 Years'},
+  {id:54,name:'HOST Milano',fullName:'HOST — International Hospitality Exhibition',edition:'2027',icon:'🍳',sector:'food',sectorLabel:'Gastronomy & Hospitality',city:'Milan',country:'Italy',lat:45.4654,lng:9.1859,venue:'Fiera Milano Rho',startDate:new Date('2027-10-17'),endDate:new Date('2027-10-21'),visitors:'187,000',exhibitors:'2,300',website:'https://www.host.fieramilano.it',description:'The international exhibition for the hospitality, catering and gastronomy equipment sectors.',freq:'Every 2 Years'},
+  {id:55,name:'SIAL China',fullName:'SIAL China — International Food & Beverage Exhibition',edition:'2026',icon:'🍜',sector:'food',sectorLabel:'Food & Beverage',city:'Shanghai',country:'China',lat:31.2304,lng:121.4737,venue:'SNIEC Shanghai',startDate:new Date('2026-05-18'),endDate:new Date('2026-05-20'),visitors:'120,000',exhibitors:'5,200',website:'https://www.sialchina.com',description:'Asia\'s largest food and beverage exhibition.',freq:'Annual'},
+  {id:56,name:'Alimentaria',fullName:'Alimentaria — International Food & Drinks Exhibition',edition:'2026',icon:'🥘',sector:'food',sectorLabel:'Food & Beverage',city:'Barcelona',country:'Spain',lat:41.3851,lng:2.1734,venue:'Fira de Barcelona Gran Via',startDate:new Date('2026-03-23'),endDate:new Date('2026-03-26'),visitors:'140,000',exhibitors:'4,200',website:'https://www.alimentaria.com',description:'The international platform for Mediterranean food and beverage.',freq:'Every 2 Years'},
+  {id:57,name:'SIAL Canada',fullName:'SIAL Canada — International Food Exhibition',edition:'2026',icon:'🍁',sector:'food',sectorLabel:'Food & Beverage',city:'Montréal',country:'Canada',lat:45.5017,lng:-73.5673,venue:'Palais des congrès de Montréal',startDate:new Date('2026-05-11'),endDate:new Date('2026-05-13'),visitors:'18,000',exhibitors:'1,000',website:'https://www.sialcanada.com',description:'North America\'s leading food and beverage trade fair.',freq:'Every 2 Years'},
+  {id:58,name:'Fispal Tecnologia',fullName:'Fispal Tecnologia — Food & Beverage Technology',edition:'2026',icon:'🥤',sector:'food',sectorLabel:'Food Technology',city:'São Paulo',country:'Brazil',lat:-23.5505,lng:-46.6333,venue:'Expo Center Norte',startDate:new Date('2026-06-23'),endDate:new Date('2026-06-26'),visitors:'65,000',exhibitors:'1,600',website:'https://www.fispaltecnologia.com.br',description:'Latin America\'s largest food technology fair.',freq:'Annual'},
+  {id:59,name:'Food & Hotel Asia',fullName:'Food & Hotel Asia — International Hospitality Trade Event',edition:'2026',icon:'🍜',sector:'food',sectorLabel:'Food & Hospitality',city:'Singapore',country:'Singapore',lat:1.3521,lng:103.8198,venue:'Singapore Expo',startDate:new Date('2026-10-06'),endDate:new Date('2026-10-09'),visitors:'45,000',exhibitors:'2,500',website:'https://www.foodhotelasia.com',description:'Asia\'s largest food, beverage and hospitality trade fair.',freq:'Every 2 Years'},
+  {id:60,name:'ANTAD & Alimentaria México',fullName:'ANTAD & Alimentaria México — Retail & Food Show',edition:'2026',icon:'🌮',sector:'food',sectorLabel:'Food & Retail',city:'Guadalajara',country:'Mexico',lat:20.6597,lng:-103.3496,venue:'Expo Guadalajara',startDate:new Date('2026-03-10'),endDate:new Date('2026-03-12'),visitors:'52,000',exhibitors:'1,400',website:'https://www.antad.net',description:'Latin America\'s largest food and retail trade fair.',freq:'Annual'},
+
+  // ─── CONSTRUCTION & ARCHITECTURE ────────────────────────────────────────
+  {id:70,name:'BAU',fullName:'BAU — World\'s Leading Trade Fair for Architecture, Materials, Systems',edition:'2027',icon:'🏗️',sector:'construction',sectorLabel:'Construction & Architecture',city:'Munich',country:'Germany',lat:48.1351,lng:11.582,venue:'Messe München',startDate:new Date('2027-04-14'),endDate:new Date('2027-04-19'),visitors:'250,000',exhibitors:'2,250',website:'https://www.bau-muenchen.com',description:'The world\'s largest trade fair for architecture, materials and building systems.',freq:'Every 2 Years'},
+  {id:71,name:'Big 5 Dubai',fullName:'The Big 5 — International Building & Construction Show',edition:'2025',icon:'🏗️',sector:'construction',sectorLabel:'Construction',city:'Dubai',country:'UAE',lat:25.2048,lng:55.2708,venue:'Dubai World Trade Centre',startDate:new Date('2025-11-24'),endDate:new Date('2025-11-27'),visitors:'63,000',exhibitors:'2,000',website:'https://www.thebig5.ae',description:'The Middle East\'s largest construction fair.',freq:'Annual'},
+  {id:72,name:'SAIE',fullName:'SAIE — International Construction Exhibition',edition:'2026',icon:'🏗️',sector:'construction',sectorLabel:'Construction',city:'Bologna',country:'Italy',lat:44.4949,lng:11.3426,venue:'BolognaFiere',startDate:new Date('2026-10-14'),endDate:new Date('2026-10-17'),visitors:'50,000',exhibitors:'900',website:'https://www.saie.bolognafiere.it',description:'Italy\'s most important construction technology fair.',freq:'Every 2 Years'},
+  {id:73,name:'REBUILD',fullName:'REBUILD — International Congress on Architecture and Digital Construction',edition:'2026',icon:'🏢',sector:'construction',sectorLabel:'Digital Construction',city:'Madrid',country:'Spain',lat:40.4168,lng:-3.7038,venue:'IFEMA Madrid',startDate:new Date('2026-03-10'),endDate:new Date('2026-03-12'),visitors:'22,000',exhibitors:'350',website:'https://rebuild-expo.com',description:'The leading international congress and exhibition for digital construction and sustainable architecture.',freq:'Annual'},
+  {id:74,name:'FOR ARCH',fullName:'FOR ARCH — International Construction Fair Prague',edition:'2026',icon:'🏗️',sector:'construction',sectorLabel:'Construction',city:'Prague',country:'Czech Republic',lat:50.0755,lng:14.4378,venue:'PVA Expo Praha',startDate:new Date('2026-09-23'),endDate:new Date('2026-09-27'),visitors:'40,000',exhibitors:'600',website:'https://www.forarch.cz',description:'Central Europe\'s largest construction and architecture fair.',freq:'Annual'},
+  {id:75,name:'KazBuild',fullName:'KazBuild — International Construction & Interiors Exhibition',edition:'2026',icon:'🏗️',sector:'construction',sectorLabel:'Construction',city:'Almaty',country:'Kazakhstan',lat:43.2551,lng:76.9126,venue:'Atakent Exhibition Centre',startDate:new Date('2026-09-02'),endDate:new Date('2026-09-05'),visitors:'23,000',exhibitors:'650',website:'https://www.kazbuild.kz',description:'Central Asia\'s largest construction fair.',freq:'Annual'},
+  {id:76,name:'Batibouw',fullName:'Batibouw — Belgium Construction & Renovation Fair',edition:'2026',icon:'🏠',sector:'construction',sectorLabel:'Construction',city:'Brussels',country:'Belgium',lat:50.8503,lng:4.3517,venue:'Brussels Expo',startDate:new Date('2026-02-26'),endDate:new Date('2026-03-08'),visitors:'160,000',exhibitors:'1,000',website:'https://www.batibouw.com',description:'Belgium\'s largest construction and renovation fair.',freq:'Annual'},
+
+  // ─── AUTOMOTIVE ─────────────────────────────────────────────────────────
+  {id:80,name:'Automechanika Frankfurt',fullName:'Automechanika Frankfurt — International Trade Fair for the Automotive Service Industry',edition:'2026',icon:'🚗',sector:'automotive',sectorLabel:'Automotive',city:'Frankfurt',country:'Germany',lat:50.1109,lng:8.6821,venue:'Messe Frankfurt',startDate:new Date('2026-09-08'),endDate:new Date('2026-09-12'),visitors:'82,000',exhibitors:'4,900',website:'https://automechanika.messefrankfurt.com',description:'The world\'s most important trade fair for the automotive service industry.',freq:'Every 2 Years'},
+  {id:81,name:'Paris Motor Show',fullName:'Mondial de l\'Auto Paris — Paris Motor Show',edition:'2026',icon:'🚙',sector:'automotive',sectorLabel:'Automotive',city:'Paris',country:'France',lat:48.8566,lng:2.3522,venue:'Paris Expo Porte de Versailles',startDate:new Date('2026-10-14'),endDate:new Date('2026-10-25'),visitors:'1,000,000',exhibitors:'300',website:'https://www.mondial.auto',description:'One of the world\'s most prestigious motor shows. Home to global vehicle premieres.',freq:'Every 2 Years'},
+  {id:82,name:'SEMA Show',fullName:'SEMA Show — Specialty Equipment Market Association',edition:'2025',icon:'🏎️',sector:'automotive',sectorLabel:'Auto Accessories',city:'Las Vegas',country:'USA',lat:36.1699,lng:-115.1398,venue:'Las Vegas Convention Center',startDate:new Date('2025-11-04'),endDate:new Date('2025-11-07'),visitors:'160,000',exhibitors:'2,400',website:'https://www.semashow.com',description:'The world\'s premier automotive specialty equipment fair.',freq:'Annual'},
+  {id:83,name:'Auto Shanghai',fullName:'Auto Shanghai — China Auto Show',edition:'2027',icon:'🚘',sector:'automotive',sectorLabel:'Automotive',city:'Shanghai',country:'China',lat:31.2304,lng:121.4737,venue:'SNIEC Shanghai',startDate:new Date('2027-04-20'),endDate:new Date('2027-04-29'),visitors:'900,000',exhibitors:'1,500',website:'https://www.autoshanghai.net',description:'One of the most visited motor shows in the world.',freq:'Every 2 Years'},
+  {id:84,name:'Tokyo Motor Show',fullName:'Japan Mobility Show — Tokyo Motor Show',edition:'2027',icon:'🚗',sector:'automotive',sectorLabel:'Automotive',city:'Tokyo',country:'Japan',lat:35.6762,lng:139.6503,venue:'Tokyo Big Sight',startDate:new Date('2027-10-25'),endDate:new Date('2027-11-04'),visitors:'1,300,000',exhibitors:'400',website:'https://www.japan-mobility-show.com',description:'Japan\'s international automotive fair. Home to world vehicle premieres.',freq:'Every 2 Years'},
+  {id:85,name:'Brussels Motor Show',fullName:'Salon International de l\'Auto Bruxelles',edition:'2026',icon:'🚗',sector:'automotive',sectorLabel:'Automotive',city:'Brussels',country:'Belgium',lat:50.8503,lng:4.3517,venue:'Brussels Expo',startDate:new Date('2026-01-09'),endDate:new Date('2026-01-19'),visitors:'400,000',exhibitors:'300',website:'https://www.autosalon.be',description:'Belgium\'s international motor show. Home to new model launches.',freq:'Annual'},
+  {id:86,name:'INTERMOT',fullName:'INTERMOT — International Motorcycle, Scooter & E-Bike Expo',edition:'2026',icon:'🏍️',sector:'automotive',sectorLabel:'Motorcycle',city:'Cologne',country:'Germany',lat:50.9333,lng:6.9833,venue:'Koelnmesse',startDate:new Date('2026-10-06'),endDate:new Date('2026-10-11'),visitors:'210,000',exhibitors:'1,000',website:'https://www.intermot-cologne.com',description:'The world\'s fair for motorcycles, scooters and e-bikes.',freq:'Every 2 Years'},
+  {id:87,name:'EICMA',fullName:'EICMA — Milan International Motorcycle Exhibition',edition:'2025',icon:'🏍️',sector:'automotive',sectorLabel:'Motorcycle',city:'Milan',country:'Italy',lat:45.4654,lng:9.1859,venue:'Fiera Milano Rho',startDate:new Date('2025-11-04'),endDate:new Date('2025-11-09'),visitors:'470,000',exhibitors:'1,800',website:'https://www.eicma.it',description:'The world\'s largest motorcycle and bicycle fair.',freq:'Annual'},
+  {id:88,name:'Seoul Motor Show',fullName:'Seoul Motor Show — International Automobile Show',edition:'2027',icon:'🚘',sector:'automotive',sectorLabel:'Automotive',city:'Seoul',country:'South Korea',lat:37.5665,lng:126.978,venue:'KINTEX Ilsan',startDate:new Date('2027-03-31'),endDate:new Date('2027-04-10'),visitors:'620,000',exhibitors:'300',website:'https://www.seoulMotorShow.or.kr',description:'Korea\'s largest international motor show.',freq:'Every 2 Years'},
+
+  // ─── HEALTHCARE ─────────────────────────────────────────────────────────
+  {id:90,name:'MEDICA',fullName:'MEDICA — World Forum for Medicine',edition:'2025',icon:'🏥',sector:'health',sectorLabel:'Medical & Health',city:'Düsseldorf',country:'Germany',lat:51.2217,lng:6.7762,venue:'Messe Düsseldorf',startDate:new Date('2025-11-17'),endDate:new Date('2025-11-20'),visitors:'81,000',exhibitors:'6,200',website:'https://www.medica.de',description:'The world\'s annual medical trade fair. Medical devices, diagnostics and service providers.',freq:'Annual'},
+  {id:91,name:'Arab Health',fullName:'Arab Health — International Medical & Healthcare Exhibition',edition:'2026',icon:'🏥',sector:'health',sectorLabel:'Healthcare',city:'Dubai',country:'UAE',lat:25.2048,lng:55.2708,venue:'Dubai World Trade Centre',startDate:new Date('2026-01-26'),endDate:new Date('2026-01-29'),visitors:'55,000',exhibitors:'3,700',website:'https://www.arabhealthonline.com',description:'The largest healthcare fair in the Middle East and Africa.',freq:'Annual'},
+  {id:92,name:'MD&M West',fullName:'MD&M West — Medical Design & Manufacturing West',edition:'2026',icon:'🔬',sector:'health',sectorLabel:'Medical Devices',city:'Anaheim',country:'USA',lat:33.8366,lng:-117.9143,venue:'Anaheim Convention Center',startDate:new Date('2026-02-10'),endDate:new Date('2026-02-12'),visitors:'25,000',exhibitors:'1,800',website:'https://www.designnews.com',description:'Western North America\'s medical device design and manufacturing show.',freq:'Annual'},
+  {id:93,name:'Africa Health',fullName:'Africa Health — Healthcare Exhibition & Congress',edition:'2026',icon:'🏥',sector:'health',sectorLabel:'Healthcare',city:'Johannesburg',country:'South Africa',lat:-26.2041,lng:28.0473,venue:'Gallagher Convention Centre',startDate:new Date('2026-05-27'),endDate:new Date('2026-05-29'),visitors:'12,000',exhibitors:'700',website:'https://www.africahealthexhibition.com',description:'Africa\'s largest healthcare and medical device fair.',freq:'Every 2 Years'},
+  {id:94,name:'COMPAMED',fullName:'COMPAMED — International Trade Fair for the Medical Manufacturing Sector',edition:'2025',icon:'⚕️',sector:'health',sectorLabel:'Medical Manufacturing',city:'Düsseldorf',country:'Germany',lat:51.2217,lng:6.7762,venue:'Messe Düsseldorf',startDate:new Date('2025-11-17'),endDate:new Date('2025-11-20'),visitors:'21,000',exhibitors:'850',website:'https://www.compamed.de',description:'The world\'s leading supplier fair for the medical manufacturing sector, co-located with MEDICA.',freq:'Annual'},
+
+  // ─── AGRICULTURE ────────────────────────────────────────────────────────
+  {id:100,name:'Agritechnica',fullName:'Agritechnica — World\'s Leading Trade Fair for Agricultural Machinery',edition:'2025',icon:'🌾',sector:'agriculture',sectorLabel:'Agricultural Machinery',city:'Hannover',country:'Germany',lat:52.3759,lng:9.7369,venue:'Deutsche Messe Hannover',startDate:new Date('2025-11-09'),endDate:new Date('2025-11-15'),visitors:'460,000',exhibitors:'2,700',website:'https://www.agritechnica.com',description:'The world\'s leading trade fair for agricultural machinery and technology. Held every 2 years in Hannover.',freq:'Every 2 Years'},
+  {id:101,name:'SIMA Paris',fullName:'SIMA — International Agribusiness Show',edition:'2026',icon:'🚜',sector:'agriculture',sectorLabel:'Agribusiness',city:'Paris',country:'France',lat:48.8566,lng:2.3522,venue:'Paris Nord Villepinte',startDate:new Date('2026-02-22'),endDate:new Date('2026-02-26'),visitors:'234,000',exhibitors:'1,600',website:'https://www.simaonline.com',description:'The international hub for agricultural innovation and agribusiness.',freq:'Every 2 Years'},
+  {id:102,name:'Nor-Fishing',fullName:'Nor-Fishing — International Fishing Industry Exhibition',edition:'2026',icon:'🐟',sector:'agriculture',sectorLabel:'Fisheries',city:'Trondheim',country:'Norway',lat:63.4305,lng:10.3951,venue:'Trondheim Spektrum',startDate:new Date('2026-08-18'),endDate:new Date('2026-08-21'),visitors:'20,000',exhibitors:'600',website:'https://www.nor-fishing.no',description:'The world\'s most important fisheries and maritime industry fair.',freq:'Every 2 Years'},
+  {id:103,name:'Agrotech India',fullName:'Agrotech India — Agricultural Technology Fair',edition:'2026',icon:'🌾',sector:'agriculture',sectorLabel:'Agriculture Technology',city:'Chandigarh',country:'India',lat:30.7333,lng:76.7794,venue:'Agri Expo Chandigarh',startDate:new Date('2026-11-18'),endDate:new Date('2026-11-21'),visitors:'120,000',exhibitors:'600',website:'https://www.agrotechindia.com',description:'India\'s international agricultural technology fair.',freq:'Every 2 Years'},
+  {id:104,name:'Agritek Africa',fullName:'Agritek Africa — Agricultural Technology Exhibition',edition:'2026',icon:'🌾',sector:'agriculture',sectorLabel:'Agriculture',city:'Nairobi',country:'Kenya',lat:-1.2921,lng:36.8219,venue:'Kenyatta International Centre',startDate:new Date('2026-08-05'),endDate:new Date('2026-08-08'),visitors:'8,000',exhibitors:'250',website:'https://www.agriteknafrica.com',description:'East Africa\'s leading agricultural technology fair.',freq:'Annual'},
+  {id:105,name:'spoga+gafa',fullName:'spoga+gafa — Garden Trade Fair',edition:'2026',icon:'🌱',sector:'agriculture',sectorLabel:'Garden & Outdoor',city:'Cologne',country:'Germany',lat:50.9333,lng:6.9833,venue:'Koelnmesse',startDate:new Date('2026-08-30'),endDate:new Date('2026-09-01'),visitors:'45,000',exhibitors:'2,200',website:'https://spogagafa.koelnmesse.de',description:'The international garden and outdoor furniture fair.',freq:'Annual'},
+
+  // ─── FURNITURE & INTERIOR DESIGN ────────────────────────────────────────
+  {id:110,name:'Salone del Mobile',fullName:'Salone Internazionale del Mobile — Milan Furniture Fair',edition:'2026',icon:'🛋️',sector:'furniture',sectorLabel:'Furniture & Design',city:'Milan',country:'Italy',lat:45.5173,lng:9.0892,venue:'Fiera Milano Rho',startDate:new Date('2026-04-14'),endDate:new Date('2026-04-19'),visitors:'370,000',exhibitors:'2,400',website:'https://www.salonemilano.it',description:'The world\'s most prestigious furniture and design fair. The entire city of Milan is transformed during Fuorisalone.',freq:'Annual'},
+  {id:111,name:'imm cologne',fullName:'imm cologne — International Furniture Trade Fair',edition:'2026',icon:'🪑',sector:'furniture',sectorLabel:'Furniture & Interior',city:'Cologne',country:'Germany',lat:50.9333,lng:6.9833,venue:'Koelnmesse',startDate:new Date('2026-01-19'),endDate:new Date('2026-01-25'),visitors:'113,000',exhibitors:'1,100',website:'https://www.imm-cologne.com',description:'The world\'s leading international furniture fair, held annually in Cologne.',freq:'Annual'},
+  {id:112,name:'Maison&Objet',fullName:'Maison&Objet — International Trade Show for Interior Design',edition:'2026',icon:'🎨',sector:'furniture',sectorLabel:'Interior Design',city:'Paris',country:'France',lat:48.8566,lng:2.3522,venue:'Paris Nord Villepinte',startDate:new Date('2026-01-16'),endDate:new Date('2026-01-20'),visitors:'80,000',exhibitors:'3,000',website:'https://www.maison-objet.com',description:'The global platform for home decoration and interior design. Held twice a year in Paris.',freq:'Twice a Year'},
+  {id:113,name:'DOMOTEX',fullName:'DOMOTEX — World\'s Leading Trade Show for Flooring',edition:'2026',icon:'🪵',sector:'furniture',sectorLabel:'Flooring',city:'Hannover',country:'Germany',lat:52.3759,lng:9.7369,venue:'Deutsche Messe',startDate:new Date('2026-01-11'),endDate:new Date('2026-01-14'),visitors:'37,000',exhibitors:'1,500',website:'https://www.domotex.de',description:'The world\'s leading flooring and carpet trade fair.',freq:'Annual'},
+  {id:114,name:'CIFF Guangzhou',fullName:'China International Furniture Fair — Guangzhou',edition:'2026',icon:'🪑',sector:'furniture',sectorLabel:'Furniture',city:'Guangzhou',country:'China',lat:23.1291,lng:113.2644,venue:'Guangzhou Pazhou Complex',startDate:new Date('2026-03-18'),endDate:new Date('2026-03-21'),visitors:'140,000',exhibitors:'4,500',website:'https://www.ciff-gz.com',description:'Asia\'s largest furniture fair. Focused on interior and office furniture.',freq:'Every 2 Years'},
+  {id:115,name:'INDEX Dubai',fullName:'INDEX — Interior Design Exhibition Dubai',edition:'2026',icon:'🛋️',sector:'furniture',sectorLabel:'Interior Design',city:'Dubai',country:'UAE',lat:25.2048,lng:55.2708,venue:'Dubai World Trade Centre',startDate:new Date('2026-05-25'),endDate:new Date('2026-05-28'),visitors:'28,000',exhibitors:'700',website:'https://www.indexexhibition.com',description:'The Middle East\'s largest interior design and furniture fair.',freq:'Annual'},
+  {id:116,name:'Warsaw Furniture Expo',fullName:'Warsaw International Furniture Fair — Furnica',edition:'2026',icon:'🪑',sector:'furniture',sectorLabel:'Furniture',city:'Warsaw',country:'Poland',lat:52.2297,lng:21.0122,venue:'PTAK Warsaw Expo',startDate:new Date('2026-09-15'),endDate:new Date('2026-09-18'),visitors:'30,000',exhibitors:'600',website:'https://www.warsawfurnitureexpo.pl',description:'Central Europe\'s largest furniture fair.',freq:'Annual'},
+
+  // ─── ENERGY ─────────────────────────────────────────────────────────────
+  {id:120,name:'WindEnergy Hamburg',fullName:'WindEnergy Hamburg — The World\'s Biggest Wind Fair',edition:'2026',icon:'💨',sector:'energy',sectorLabel:'Wind Energy',city:'Hamburg',country:'Germany',lat:53.5753,lng:10.0153,venue:'Hamburg Messe',startDate:new Date('2026-09-22'),endDate:new Date('2026-09-25'),visitors:'35,000',exhibitors:'1,500',website:'https://www.windenergyhamburg.com',description:'The world\'s largest wind energy trade fair.',freq:'Every 2 Years'},
+  {id:121,name:'ADIPEC',fullName:'ADIPEC — Abu Dhabi International Petroleum Exhibition and Conference',edition:'2025',icon:'🛢️',sector:'energy',sectorLabel:'Oil & Gas',city:'Abu Dhabi',country:'UAE',lat:24.4539,lng:54.3773,venue:'Abu Dhabi National Exhibition Centre',startDate:new Date('2025-11-04'),endDate:new Date('2025-11-07'),visitors:'180,000',exhibitors:'2,200',website:'https://www.adipec.com',description:'The world\'s largest oil and gas trade fair. Held annually in Abu Dhabi.',freq:'Annual'},
+  {id:122,name:'Intersolar Europe',fullName:'Intersolar Europe — The World\'s Leading Exhibition for the Solar Industry',edition:'2026',icon:'☀️',sector:'energy',sectorLabel:'Solar Energy',city:'Munich',country:'Germany',lat:48.1351,lng:11.582,venue:'Messe München',startDate:new Date('2026-06-03'),endDate:new Date('2026-06-05'),visitors:'50,000',exhibitors:'1,400',website:'https://www.intersolar.de',description:'The world\'s leading solar industry exhibition.',freq:'Annual'},
+  {id:123,name:'IFAT Munich',fullName:'IFAT Munich — World\'s Leading Trade Fair for Water, Sewage, Waste and Raw Materials Management',edition:'2026',icon:'♻️',sector:'energy',sectorLabel:'Environmental',city:'Munich',country:'Germany',lat:48.1351,lng:11.582,venue:'Messe München',startDate:new Date('2026-05-04'),endDate:new Date('2026-05-08'),visitors:'100,000',exhibitors:'3,000',website:'https://www.ifat.de',description:'The world\'s leading trade fair for water, sewage and waste management.',freq:'Every 2 Years'},
+  {id:124,name:'IFAT Eurasia',fullName:'IFAT Eurasia — Environmental Technologies Trade Fair',edition:'2026',icon:'♻️',sector:'energy',sectorLabel:'Environmental',city:'Istanbul',country:'Turkey',lat:41.0082,lng:28.9784,venue:'CNR Expo Istanbul',startDate:new Date('2026-03-12'),endDate:new Date('2026-03-15'),visitors:'25,000',exhibitors:'450',website:'https://www.ifat-eurasia.com',description:'Eurasia\'s environmental technologies fair. Waste management, water treatment and recycling.',freq:'Every 2 Years'},
+  {id:125,name:'Aquatech Amsterdam',fullName:'Aquatech Amsterdam — International Water Technology Exhibition',edition:'2025',icon:'💧',sector:'energy',sectorLabel:'Water Technology',city:'Amsterdam',country:'Netherlands',lat:52.3676,lng:4.9041,venue:'RAI Amsterdam',startDate:new Date('2025-11-05'),endDate:new Date('2025-11-08'),visitors:'23,000',exhibitors:'1,000',website:'https://www.aquatechtrade.com',description:'The world\'s water technology and treatment fair.',freq:'Every 2 Years'},
+
+  // ─── CHEMICALS & PLASTICS ────────────────────────────────────────────────
+  {id:130,name:'ACHEMA',fullName:'ACHEMA — World Forum for the Process Industries',edition:'2027',icon:'⚗️',sector:'chemicals',sectorLabel:'Chemistry & Process',city:'Frankfurt',country:'Germany',lat:50.1109,lng:8.6821,venue:'Messe Frankfurt',startDate:new Date('2027-06-14'),endDate:new Date('2027-06-19'),visitors:'145,000',exhibitors:'3,800',website:'https://www.achema.de',description:'The world\'s forum for chemical, process and laboratory technology. Held every 3 years.',freq:'Every 3 Years'},
+  {id:131,name:'K Fair',fullName:'K — International Trade Fair for Plastics and Rubber',edition:'2028',icon:'🧪',sector:'chemicals',sectorLabel:'Plastics & Rubber',city:'Düsseldorf',country:'Germany',lat:51.2217,lng:6.7762,venue:'Messe Düsseldorf',startDate:new Date('2028-10-08'),endDate:new Date('2028-10-15'),visitors:'225,000',exhibitors:'3,300',website:'https://www.k-online.com',description:'The world\'s largest plastics and rubber fair. Held every 3 years.',freq:'Every 3 Years'},
+  {id:132,name:'CHINAPLAS',fullName:'CHINAPLAS — International Exhibition on Plastics and Rubber Industries',edition:'2026',icon:'🧪',sector:'chemicals',sectorLabel:'Plastics & Rubber',city:'Shenzhen',country:'China',lat:22.5431,lng:114.0579,venue:'Shenzhen World Exhibition Center',startDate:new Date('2026-04-23'),endDate:new Date('2026-04-26'),visitors:'230,000',exhibitors:'4,000',website:'https://www.chinaplasonline.com',description:'Asia\'s largest plastics and rubber fair.',freq:'Annual'},
+  {id:133,name:'NPE',fullName:'NPE — The Plastics Show',edition:'2027',icon:'🔬',sector:'chemicals',sectorLabel:'Plastics',city:'Orlando',country:'USA',lat:28.5383,lng:-81.3792,venue:'Orange County Convention Center',startDate:new Date('2027-05-17'),endDate:new Date('2027-05-21'),visitors:'65,000',exhibitors:'2,200',website:'https://www.npe.org',description:'North America\'s largest plastics industry fair. Held every 3 years in Orlando.',freq:'Every 3 Years'},
+  {id:134,name:'PlastIndia',fullName:'PlastIndia — International Plastics Exhibition & Conference',edition:'2026',icon:'🧪',sector:'chemicals',sectorLabel:'Plastics',city:'Gandhinagar',country:'India',lat:23.2156,lng:72.6369,venue:'Helipad Exhibition Centre',startDate:new Date('2026-02-01'),endDate:new Date('2026-02-05'),visitors:'300,000',exhibitors:'2,500',website:'https://www.plastindia.org',description:'India\'s largest plastics industry fair. Held every 3 years.',freq:'Every 3 Years'},
+  {id:135,name:'FEIPLAR',fullName:'FEIPLAR Composites — Plastics & Rubber Brazil',edition:'2026',icon:'🧪',sector:'chemicals',sectorLabel:'Plastics & Composites',city:'São Paulo',country:'Brazil',lat:-23.5505,lng:-46.6333,venue:'Expo Center Norte',startDate:new Date('2026-10-12'),endDate:new Date('2026-10-15'),visitors:'18,000',exhibitors:'450',website:'https://www.feiplar.com.br',description:'Latin America\'s plastics and composites fair.',freq:'Every 2 Years'},
+  {id:136,name:'Turkchem',fullName:'Turkchem — International Chemical Industry & Technology Fair',edition:'2026',icon:'⚗️',sector:'chemicals',sectorLabel:'Chemistry',city:'Istanbul',country:'Turkey',lat:41.0082,lng:28.9784,venue:'CNR Expo Istanbul',startDate:new Date('2026-05-07'),endDate:new Date('2026-05-09'),visitors:'8,000',exhibitors:'300',website:'https://www.turkchem.net',description:'Turkey\'s international chemistry industry fair.',freq:'Every 2 Years'},
+
+  // ─── DEFENCE ────────────────────────────────────────────────────────────
+  {id:140,name:'Eurosatory',fullName:'Eurosatory — International Land & Airland Defence and Security Exhibition',edition:'2026',icon:'🛡️',sector:'defence',sectorLabel:'Defence & Security',city:'Paris',country:'France',lat:48.8566,lng:2.3522,venue:'Paris Le Bourget',startDate:new Date('2026-06-08'),endDate:new Date('2026-06-13'),visitors:'57,000',exhibitors:'1,700',website:'https://www.eurosatory.com',description:'The world\'s largest land defence and security exhibition.',freq:'Every 2 Years'},
+  {id:141,name:'DSEI',fullName:'DSEI — Defence & Security Equipment International',edition:'2027',icon:'🛡️',sector:'defence',sectorLabel:'Defence',city:'London',country:'United Kingdom',lat:51.5074,lng:-0.1278,venue:'ExCeL London',startDate:new Date('2027-09-09'),endDate:new Date('2027-09-12'),visitors:'35,000',exhibitors:'1,600',website:'https://www.dsei.co.uk',description:'The world\'s leading defence and security fair.',freq:'Every 2 Years'},
+  {id:142,name:'IDEF',fullName:'IDEF — International Defence Industry Fair',edition:'2027',icon:'🛡️',sector:'defence',sectorLabel:'Defence Industry',city:'Istanbul',country:'Turkey',lat:41.0082,lng:28.9784,venue:'Tüyap Fair Center',startDate:new Date('2027-07-28'),endDate:new Date('2027-08-01'),visitors:'65,000',exhibitors:'1,200',website:'https://www.idef.com.tr',description:'Turkey\'s defence industry fair and the largest defence event in the region.',freq:'Every 2 Years'},
+  {id:143,name:'IDEX',fullName:'IDEX — International Defence Exhibition & Conference',edition:'2027',icon:'🛡️',sector:'defence',sectorLabel:'Defence',city:'Abu Dhabi',country:'UAE',lat:24.4539,lng:54.3773,venue:'Abu Dhabi National Exhibition Centre',startDate:new Date('2027-02-23'),endDate:new Date('2027-02-27'),visitors:'105,000',exhibitors:'1,400',website:'https://www.idexuae.ae',description:'The most important defence exhibition in the Middle East and Africa.',freq:'Every 2 Years'},
+
+  // ─── OTHER ──────────────────────────────────────────────────────────────
+  {id:150,name:'World Travel Market',fullName:'World Travel Market London',edition:'2026',icon:'✈️',sector:'other',sectorLabel:'Tourism & Travel',city:'London',country:'United Kingdom',lat:51.5074,lng:-0.1278,venue:'ExCeL London',startDate:new Date('2026-11-04'),endDate:new Date('2026-11-06'),visitors:'51,000',exhibitors:'5,000',website:'https://www.wtm.com',description:'The global travel and tourism industry\'s world fair.',freq:'Annual'},
+  {id:151,name:'ITB Berlin',fullName:'ITB Berlin — International Tourism Bourse',edition:'2026',icon:'✈️',sector:'other',sectorLabel:'Tourism',city:'Berlin',country:'Germany',lat:52.52,lng:13.405,venue:'Messe Berlin',startDate:new Date('2026-03-03'),endDate:new Date('2026-03-05'),visitors:'120,000',exhibitors:'5,000',website:'https://www.itb.com',description:'The world\'s largest tourism fair. Held annually in Berlin.',freq:'Annual'},
+  {id:152,name:'IBTM World',fullName:'IBTM World — International Meetings, Incentives, Conferences & Events',edition:'2025',icon:'🤝',sector:'other',sectorLabel:'MICE & Events',city:'Barcelona',country:'Spain',lat:41.3851,lng:2.1734,venue:'Fira de Barcelona Gran Via',startDate:new Date('2025-11-19'),endDate:new Date('2025-11-21'),visitors:'15,000',exhibitors:'3,000',website:'https://www.ibtmworld.com',description:'The world\'s MICE (Meetings, Incentives, Conferences and Events) fair.',freq:'Annual'},
+  {id:153,name:'London Book Fair',fullName:'London Book Fair',edition:'2026',icon:'📚',sector:'other',sectorLabel:'Publishing & Media',city:'London',country:'United Kingdom',lat:51.5074,lng:-0.1278,venue:'Olympia London',startDate:new Date('2026-04-21'),endDate:new Date('2026-04-23'),visitors:'25,000',exhibitors:'1,500',website:'https://www.londonbookfair.co.uk',description:'The global publishing industry\'s most important meeting. Copyright rights trading centre.',freq:'Annual'},
+  {id:154,name:'Watches & Wonders',fullName:'Watches & Wonders Geneva — Fine Watchmaking Show',edition:'2026',icon:'⌚',sector:'other',sectorLabel:'Watches & Jewellery',city:'Geneva',country:'Switzerland',lat:46.2044,lng:6.1432,venue:'Palexpo Geneva',startDate:new Date('2026-04-01'),endDate:new Date('2026-04-05'),visitors:'14,000',exhibitors:'48',website:'https://www.watchesandwonders.com',description:'The world\'s most prestigious luxury watch fair.',freq:'Annual'},
+  {id:155,name:'RemaDays Warsaw',fullName:'RemaDays Warsaw — Promotional Products & Advertising Fair',edition:'2026',icon:'🎁',sector:'other',sectorLabel:'Promotional Products',city:'Warsaw',country:'Poland',lat:52.2297,lng:21.0122,venue:'PTAK Warsaw Expo',startDate:new Date('2026-02-11'),endDate:new Date('2026-02-13'),visitors:'35,000',exhibitors:'1,500',website:'https://www.remadays.com',description:'Central and Eastern Europe\'s largest promotional products fair.',freq:'Annual'},
+  {id:156,name:'Belgrade Book Fair',fullName:'Belgrade International Book Fair',edition:'2025',icon:'📚',sector:'other',sectorLabel:'Publishing',city:'Belgrade',country:'Serbia',lat:44.7866,lng:20.4489,venue:'Belgrade Fair',startDate:new Date('2025-10-27'),endDate:new Date('2025-11-01'),visitors:'100,000',exhibitors:'700',website:'https://www.sajamknjiga.rs',description:'The Balkans\' largest book fair.',freq:'Annual'},
+  {id:157,name:'Manufacturing Indaba',fullName:'Manufacturing Indaba — African Industrial Summit',edition:'2026',icon:'🏭',sector:'other',sectorLabel:'Industrial',city:'Johannesburg',country:'South Africa',lat:-26.2041,lng:28.0473,venue:'Sandton Convention Centre',startDate:new Date('2026-06-03'),endDate:new Date('2026-06-04'),visitors:'4,500',exhibitors:'200',website:'https://www.manufacturingindaba.co.za',description:'Africa\'s manufacturing and industry summit.',freq:'Annual'},
+  {id:158,name:'EPHJ Geneva',fullName:'EPHJ — International Exhibition for Watchmaking, Jewellery, Medtech',edition:'2026',icon:'💎',sector:'other',sectorLabel:'Watches & Jewellery',city:'Geneva',country:'Switzerland',lat:46.2044,lng:6.1432,venue:'Palexpo Geneva',startDate:new Date('2026-06-09'),endDate:new Date('2026-06-12'),visitors:'21,000',exhibitors:'850',website:'https://www.ephj.ch',description:'The international supplier fair for watchmaking, jewellery and medtech.',freq:'Annual'},
+];
+
+// ────────────────────────────────────────────────────────────────────────────
+// STATE
+// ─── API CONFIG ──────────────────────────────────────────────────────────────
+// Replace with your Google Apps Script Web App URL after deployment:
+const API_URL = "https://script.google.com/macros/s/AKfycbwSiHm_0GvXzBxpqfsbh5m9fmWGDbPrnOnPa-kMY410BoNOJaNpvKD34UWpyhkc9bGP/exec";
+// If API_URL is not set, the app falls back to the FAIRS[] hardcoded data below.
+
+let favorites = new Set();
+let selectedSector = 'all';
+let currentView = 'list';
+let leafletMap = null;
+let markers = [];
+let currentFiltered = [];
+let LIVE_FAIRS = null;   // populated from API; null = not loaded yet
+
+// ────────────────────────────────────────────────────────────────────────────
+// UTILS
+function getStatus(s, e) {
+  if (TODAY >= s && TODAY <= e) return 'ongoing';
+  if (TODAY < s) return 'upcoming';
+  return 'past';
+}
+function daysUntil(d) { return Math.ceil((d - TODAY) / 86400000); }
+function fmtDate(d) {
+  if (!(d instanceof Date) || isNaN(d)) return '—';
+  return d.toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'});
+}
+function fmtDateShort(d) {
+  if (!(d instanceof Date) || isNaN(d)) return '—';
+  return d.toLocaleDateString('en-GB', {day:'numeric', month:'short'});
+}
+function activeFairs() {
+  // Use live API data if loaded, otherwise fall back to hardcoded FAIRS
+  return LIVE_FAIRS || FAIRS;
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// API LOADER
+async function loadFromAPI() {
+  if (!API_URL || API_URL === "YOUR_APPS_SCRIPT_URL_HERE") {
+    // No API configured → use hardcoded data silently
+    return false;
+  }
+
+  setLoadingState(true);
+  try {
+    const res  = await fetch(`${API_URL}?action=fairs&limit=2000`, { cache: "no-store" });
+    const json = await res.json();
+
+    if (!json.fairs || !Array.isArray(json.fairs)) throw new Error("Bad API response");
+
+    // Normalise: convert string dates → Date objects
+    // Sheets returns "Tue Dec 02 2025 00:00:00 GMT+0100" — handle both formats
+    function parseSheetDate(s) {
+      if (!s) return null;
+      const iso = s.match(/(\d{4})-(\d{2})-(\d{2})/);
+      if (iso) return new Date(iso[0]);
+      const d = new Date(s);
+      return isNaN(d) ? null : d;
+    }
+    LIVE_FAIRS = json.fairs
+      .filter(f => f.name && f.startDate)
+      .map((f, i) => ({
+        ...f,
+        id:         f.id || i + 1,
+        startDate:  parseSheetDate(f.startDate),
+        endDate:    parseSheetDate(f.endDate || f.startDate),
+        lat:        parseFloat(f.lat) || null,
+        lng:        parseFloat(f.lng) || null,
+      }))
+      .filter(f => f.startDate && !isNaN(f.startDate));
+
+    showDataBadge(`🔴 Live — ${LIVE_FAIRS.length} fairs from database`);
+    return true;
+  } catch (err) {
+    console.warn("API load failed, using built-in data:", err.message);
+    showDataBadge(`📦 Built-in data — ${FAIRS.length} fairs`);
+    return false;
+  } finally {
+    setLoadingState(false);
+  }
+}
+
+function setLoadingState(on) {
+  const grid = document.getElementById('fairsGrid');
+  if (on) {
+    grid.innerHTML = `<div class="empty">
+      <div class="empty-icon" style="animation:spin 1s linear infinite;display:inline-block">⏳</div>
+      <h3>Loading live data…</h3>
+      <p>Fetching from database</p>
+    </div>`;
+    document.getElementById('resultInfo').textContent = 'Loading…';
+  }
+}
+
+function showDataBadge(text) {
+  let badge = document.getElementById('dataBadge');
+  if (!badge) {
+    badge = document.createElement('div');
+    badge.id = 'dataBadge';
+    badge.style.cssText = `
+      position:fixed; bottom:20px; right:20px; z-index:999;
+      background:var(--surface); border:1px solid var(--border);
+      padding:8px 14px; border-radius:8px; font-size:.75rem;
+      color:var(--muted); backdrop-filter:blur(10px);
+      transition: opacity 1s; cursor: default;
+    `;
+    document.body.appendChild(badge);
+    setTimeout(() => { badge.style.opacity = '0'; }, 5000);
+  }
+  badge.textContent = text;
+  badge.style.opacity = '1';
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// INIT
+async function init() {
+  // Build UI scaffolding first (instant)
+  const chipsEl = document.getElementById('sectorChips');
+  chipsEl.innerHTML = SECTORS.map(s =>
+    `<button class="chip ${s.id==='all'?'active':''}" onclick="selectSector('${s.id}',this)">${s.label}</button>`
+  ).join('');
+
+  // Show built-in data immediately while API loads
+  buildCountryDropdown(FAIRS);
+  updateHeaderCounts(FAIRS);
+  applyFilters();
+
+  // Then try to load from API in background
+  const apiOk = await loadFromAPI();
+  if (apiOk) {
+    buildCountryDropdown(LIVE_FAIRS);
+    updateHeaderCounts(LIVE_FAIRS);
+    applyFilters();
+  }
+}
+
+function buildCountryDropdown(fairs) {
+  const csel = document.getElementById('countryFilter');
+  const current = csel.value;
+  csel.innerHTML = '<option value="">🌍 All Countries</option>';
+  [...new Set(fairs.map(f=>f.country))].sort().forEach(c => {
+    csel.innerHTML += `<option value="${c}" ${c===current?'selected':''}>${c}</option>`;
+  });
+}
+
+function updateHeaderCounts(fairs) {
+  document.getElementById('hCount').textContent = fairs.length;
+  document.getElementById('hCountries').textContent = new Set(fairs.map(f=>f.country)).size;
+}
+
+function selectSector(id, el) {
+  selectedSector = id;
+  document.querySelectorAll('.chips .chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  applyFilters();
+}
+
+function setView(v) {
+  currentView = v;
+  document.getElementById('btnList').classList.toggle('active', v==='list');
+  document.getElementById('btnMap').classList.toggle('active', v==='map');
+  document.getElementById('listView').style.display = v==='list' ? '' : 'none';
+  document.getElementById('mapView').style.display = v==='map' ? '' : 'none';
+  if (v === 'map') { initMap(); renderMap(currentFiltered); }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// FILTERS
+function applyFilters() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  const country = document.getElementById('countryFilter').value;
+  const month = document.getElementById('monthFilter').value;
+  const status = document.getElementById('statusFilter').value;
+  const region = document.getElementById('regionFilter').value;
+  const sort = document.getElementById('sortSelect').value;
+
+  let res = activeFairs().filter(f => {
+    const st = getStatus(f.startDate, f.endDate);
+    return (!q || [f.name,f.city,f.country,f.sectorLabel,f.fullName].some(x => x.toLowerCase().includes(q)))
+      && (selectedSector === 'all' || f.sector === selectedSector)
+      && (!country || f.country === country)
+      && (!month || f.startDate instanceof Date && f.startDate.getMonth()+1 === +month)
+      && (!status || st === status)
+      && (!region || REGIONS[f.country] === region);
+  });
+
+  if (sort === 'date') res.sort((a,b) => a.startDate - b.startDate);
+  else if (sort === 'name') res.sort((a,b) => a.name.localeCompare(b.name));
+  else if (sort === 'visitors') res.sort((a,b) => parseInt(b.visitors.replace(/,/g,'')) - parseInt(a.visitors.replace(/,/g,'')));
+
+  currentFiltered = res;
+  const s = selectedSector !== 'all' ? SECTORS.find(x=>x.id===selectedSector)?.label : 'All Fairs';
+  document.getElementById('sectionTitle').textContent = s;
+  document.getElementById('resultInfo').textContent = `${res.length} fair${res.length!==1?'s':''} found`;
+
+  if (currentView === 'list') renderCards(res);
+  else renderMap(res);
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// LIST VIEW
+function renderCards(fairs) {
+  const grid = document.getElementById('fairsGrid');
+  if (!fairs.length) {
+    grid.innerHTML = `<div class="empty"><div class="empty-icon">🔍</div><h3>No results found</h3><p>Try different filters</p></div>`;
+    return;
+  }
+  grid.innerHTML = fairs.map((f,i) => {
+    const st = getStatus(f.startDate, f.endDate);
+    const days = daysUntil(f.startDate);
+    const fav = favorites.has(f.id);
+    const statusBadge = st==='ongoing'
+      ? '<span class="badge b-ongoing">● Live</span>'
+      : st==='upcoming'
+        ? '<span class="badge b-upcoming">Upcoming</span>'
+        : '<span class="badge b-past">Past</span>';
+    const timeInfo = st==='upcoming' && days<=400
+      ? `<div class="info-row"><span class="info-icon">⏱</span><span class="countdown"><span class="cval">${days}</span> days left</span></div>`
+      : st==='ongoing' ? `<div class="info-row"><span class="info-icon">🟢</span><span style="color:#6ee7b7;font-size:.78rem">Open now</span></div>` : '';
+    return `<div class="fair-card" style="animation-delay:${i*30}ms" onclick="openModal(${f.id})">
+      <div class="card-header">
+        <div class="card-logo">${f.icon}</div>
+        <div class="card-badges"><span class="badge b-sector">${f.sectorLabel}</span>${statusBadge}</div>
+      </div>
+      <div class="card-name">${f.name}</div>
+      <div class="card-edition">${f.edition} · ${f.freq}</div>
+      <div class="card-info">
+        <div class="info-row"><span class="info-icon">📅</span><strong>${fmtDate(f.startDate)}</strong> — ${fmtDate(f.endDate)}</div>
+        <div class="info-row"><span class="info-icon">📍</span>${f.venue}, <strong>${f.city}</strong>, ${f.country}</div>
+        <div class="info-row"><span class="info-icon">👥</span>~${f.visitors} visitors · ${f.exhibitors} exhibitors</div>
+        ${timeInfo}
+      </div>
+      <div class="card-footer">
+        <div class="visitor-stat">🏆 <strong>${f.visitors}</strong></div>
+        <div class="card-actions">
+          <button class="btn-fav ${fav?'active':''}" onclick="toggleFav(event,${f.id})">⭐</button>
+          <button class="btn-detail" onclick="openModal(${f.id});event.stopPropagation()">Details →</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// MAP VIEW
+function initMap() {
+  if (leafletMap) return;
+  leafletMap = L.map('map', {zoomControl:true, attributionControl:false}).setView([30, 15], 2);
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    maxZoom: 18, subdomains: 'abcd'
+  }).addTo(leafletMap);
+}
+
+function renderMap(fairs) {
+  if (!leafletMap) return;
+  markers.forEach(m => leafletMap.removeLayer(m));
+  markers = [];
+
+  const sidebar = document.getElementById('mapSidebar');
+  sidebar.innerHTML = '';
+
+  const sectorColors = {
+    packaging:'#3b82f6', textile:'#8b5cf6', electronics:'#06b6d4',
+    food:'#f59e0b', construction:'#ef4444', automotive:'#10b981',
+    health:'#ec4899', agriculture:'#84cc16', furniture:'#f97316',
+    energy:'#fbbf24', chemicals:'#a78bfa', defence:'#6b7280', other:'#94a3b8'
+  };
+
+  fairs.forEach((f, i) => {
+    if (!f.lat || !f.lng) return;
+    const st = getStatus(f.startDate, f.endDate);
+    const col = sectorColors[f.sector] || '#3b82f6';
+
+    const icon = L.divIcon({
+      html: `<div style="width:10px;height:10px;background:${col};border:2px solid rgba(255,255,255,.5);border-radius:50%;cursor:pointer;box-shadow:0 0 6px ${col}88;transition:all .2s;"></div>`,
+      className: '', iconSize: [10, 10], iconAnchor: [5, 5]
+    });
+
+    const marker = L.marker([f.lat, f.lng], {icon})
+      .addTo(leafletMap)
+      .bindPopup(`
+        <div style="font-family:'DM Sans',sans-serif;min-width:180px;">
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.85rem;color:#e2e8f0;margin-bottom:3px;">${f.icon} ${f.name}</div>
+          <div style="font-size:.73rem;color:#64748b;">${f.city}, ${f.country}</div>
+          <div style="font-size:.73rem;color:#06b6d4;margin-top:3px;">${fmtDateShort(f.startDate)} — ${fmtDateShort(f.endDate)} ${f.startDate.getFullYear()}</div>
+          <div style="font-size:.7rem;color:#3b82f6;margin-top:2px;">${f.sectorLabel}</div>
+          <button onclick="openModal(${f.id})" style="margin-top:8px;width:100%;background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.2);color:#93c5fd;padding:4px;border-radius:5px;cursor:pointer;font-size:.72rem;font-family:'DM Sans',sans-serif;">View Details →</button>
+        </div>
+      `, {className: 'expo-popup', maxWidth: 220})
+      .on('click', () => highlightSidebarCard(f.id));
+
+    markers.push(marker);
+
+    // Sidebar card
+    const card = document.createElement('div');
+    card.className = 'map-card';
+    card.id = `mc-${f.id}`;
+    card.onclick = () => {
+      leafletMap.setView([f.lat, f.lng], 6, {animate:true});
+      marker.openPopup();
+      highlightSidebarCard(f.id);
+    };
+    const st2 = st==='ongoing' ? '🟢 ' : st==='upcoming' ? '🔵 ' : '⚫ ';
+    card.innerHTML = `
+      <div class="map-card-name">${f.icon} ${f.name}</div>
+      <div class="map-card-meta">${f.city}, ${f.country} · ${f.sectorLabel}</div>
+      <div class="map-card-date">${st2}${fmtDateShort(f.startDate)} — ${fmtDateShort(f.endDate)} ${f.startDate.getFullYear()}</div>
+    `;
+    sidebar.appendChild(card);
+  });
+}
+
+function highlightSidebarCard(id) {
+  document.querySelectorAll('.map-card').forEach(c => c.classList.remove('highlighted'));
+  const el = document.getElementById(`mc-${id}`);
+  if (el) { el.classList.add('highlighted'); el.scrollIntoView({behavior:'smooth', block:'nearest'}); }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// MODAL
+function openModal(id) {
+  const f = FAIRS.find(x => x.id === id);
+  if (!f) return;
+  const st = getStatus(f.startDate, f.endDate);
+  const days = daysUntil(f.startDate);
+  const stText = st==='ongoing' ? '🟢 Ongoing' : st==='upcoming' ? `🔵 In ${days} days` : '⚫ Concluded';
+  document.getElementById('modalBody').innerHTML = `
+    <div class="modal-tag">${f.icon} ${f.sectorLabel}</div>
+    <div class="modal-title">${f.name}</div>
+    <div class="modal-subtitle">${f.fullName}</div>
+    <div class="modal-grid">
+      <div class="mstat"><div class="mstat-label">Dates</div><div class="mstat-value" style="font-size:.82rem">${fmtDate(f.startDate)} — ${fmtDate(f.endDate)}</div></div>
+      <div class="mstat"><div class="mstat-label">Status</div><div class="mstat-value" style="font-size:.82rem">${stText}</div></div>
+      <div class="mstat"><div class="mstat-label">Venue</div><div class="mstat-value" style="font-size:.8rem">${f.venue}</div></div>
+      <div class="mstat"><div class="mstat-label">Location</div><div class="mstat-value" style="font-size:.82rem">${f.city}, ${f.country}</div></div>
+      <div class="mstat"><div class="mstat-label">Visitors</div><div class="mstat-value">${f.visitors}</div></div>
+      <div class="mstat"><div class="mstat-label">Exhibitors</div><div class="mstat-value">${f.exhibitors}</div></div>
+      <div class="mstat"><div class="mstat-label">Frequency</div><div class="mstat-value" style="font-size:.82rem">${f.freq}</div></div>
+      <div class="mstat"><div class="mstat-label">Region</div><div class="mstat-value" style="font-size:.82rem">${REGIONS[f.country]||'—'}</div></div>
+    </div>
+    <p class="modal-desc">${f.description}</p>
+    <a href="${f.website}" target="_blank" class="modal-website">🌐 Official Website →</a>
+  `;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+function closeModal(e) { if (e.target === document.getElementById('modalOverlay')) closeModalBtn(); }
+function closeModalBtn() { document.getElementById('modalOverlay').classList.remove('open'); }
+document.addEventListener('keydown', e => { if (e.key==='Escape') closeModalBtn(); });
+
+function toggleFav(e, id) {
+  e.stopPropagation();
+  favorites.has(id) ? favorites.delete(id) : favorites.add(id);
+  applyFilters();
+}
+
+init();
+</script>
+</body>
+</html>
